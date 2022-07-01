@@ -3,25 +3,25 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.2.32526.322
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ffmpeg", "ffmpeg.vcxproj", "{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{4AF30CCC-E5B0-4F35-8292-F6CECF532DAC}"
+	ProjectSection(SolutionItems) = preProject
+		src\AltPacketQueue.cpp = src\AltPacketQueue.cpp
+		src\AltPacketQueue.h = src\AltPacketQueue.h
+		src\AudioResampling.h = src\AudioResampling.h
+		src\AudioStream.cpp = src\AudioStream.cpp
+		src\AudioStream.h = src\AudioStream.h
+		src\main.cpp = src\main.cpp
+		src\PacketQueue.h = src\PacketQueue.h
+		src\Player.cpp = src\Player.cpp
+		src\Player.h = src\Player.h
+		src\Screen.h = src\Screen.h
+		src\VideoPictureQueue.cpp = src\VideoPictureQueue.cpp
+		src\VideoPictureQueue.h = src\VideoPictureQueue.h
+		src\VideoStream.cpp = src\VideoStream.cpp
+		src\VideoStream.h = src\VideoStream.h
+	EndProjectSection
 EndProject
 Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}.Debug|x64.ActiveCfg = Debug|x64
-		{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}.Debug|x64.Build.0 = Debug|x64
-		{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}.Debug|x86.ActiveCfg = Debug|Win32
-		{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}.Debug|x86.Build.0 = Debug|Win32
-		{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}.Release|x64.ActiveCfg = Release|x64
-		{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}.Release|x64.Build.0 = Release|x64
-		{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}.Release|x86.ActiveCfg = Release|Win32
-		{2A1D66B5-FED5-4DCB-BA5C-C3C1039A6242}.Release|x86.Build.0 = Release|Win32
-	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
