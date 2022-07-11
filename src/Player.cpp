@@ -1,382 +1,303 @@
 #include "Player.h"
-#include "Screen.h"
-extern Screen g_screen;
+#include "Utils.h"
+Player* Player::m_instance = 0;
+
 Player::Player()
 {
-    if( SDL_Init( SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_TIMER ) != 0 )
-        printf( "Could not initialize SDL - %s\n ", SDL_GetError() );
-    SDL_AudioInit( "directsound" );
+    SDLWrapper::initSdl();
 }
 
-Player::~Player()
+void Player::getCodecParams()
 {
-
+	m_videoCodec.params = m_formatCtx->streams[m_videoStreamNum]->codecpar;
+	m_audioCodec.params = m_formatCtx->streams[m_audioStreamNum]->codecpar;
 }
 
-void Player::setFileName( const std::string& filename )
+void Player::readCodec( CodecData& codecData )
 {
-    m_fileName = filename;
+	codecData.codec = avcodec_find_decoder( codecData.params->codec_id );
+	if( !codecData.codec )
+		Utils::displayException( "Cannot find decoder" );
+	codecData.codecCtx = avcodec_alloc_context3( codecData.codec );
+	if( codecData.codecCtx == nullptr )
+		Utils::displayException( "Failed to allocate context decoder" );
+	if( avcodec_parameters_to_context( codecData.codecCtx, codecData.params ) < 0 )
+		Utils::displayException( "Failed to transfer parameters to context" );
+	if( avcodec_open2( codecData.codecCtx,codecData.codec,NULL) < 0 )
+		Utils::displayException( "Failed to open codec" );
 }
 
-bool Player::startDecodeThread()
+void Player::decodeThread()
 {
-    m_decodeThread = SDL_CreateThread( decodeThread, "Decoding Thread", this );
-    if( !m_decodeThread )
-    {
-        std::cout << "Could not start decoding SDL_Thread - exiting.\n";
-        return false;
-    }
-    return true;
+	AVPacket* packet = av_packet_alloc();
+	if( packet == NULL )
+		Utils::displayException( "Could not alloc packet.\n" );
+	while( !m_quitFlag )
+	{
+		int ret = av_read_frame( m_formatCtx, packet );
+		if( ret < 0 )
+		{
+			if( ret == AVERROR_EOF )
+				break;
+			else if( m_formatCtx->pb->error == 0 )
+			{
+				SDL_Delay( 10 );
+				continue;
+			}
+			else
+				break;
+		}
+		static int packeetNum = 0;
+		if( packet->stream_index == m_audioStreamNum )
+			Audio::getInstance()->m_audioQueue.put(packet);
+		else if( packet->stream_index == m_videoStreamNum )
+			Video::getInstance()->m_videoQueue.put( packet );
+		else
+			av_packet_unref( packet );
+	}
 }
 
-void Player::refreshVideo()
-{    
-    VideoPicture* videoPicture;
-    double pts_delay;
-    double audio_ref_clock;
-    double sync_threshold;
-    double real_delay;
-    double audio_video_delay;
+void Player::SDLEventLoop()
+{
+	bool pause = false;
+	SDL_Event event;
+	while( true )
+	{
+		if( SDL_WaitEvent( &event ) == 0 )
+		{
+			printf( "SDL_WaitEvent failed: %s.\n", SDL_GetError() );
+		}
+		switch( event.type )
+		{
+		case SDL_KEYDOWN:
+		{
+			switch( event.key.keysym.sym )
+			{
+			case SDLK_SPACE:
+			{
+				pause = !pause;
+				Video::getInstance()->setPause( pause );
+				SDL_PauseAudio( pause );
+				break;
+			}
+			}
+			break;
+		}
+		case FF_QUIT_EVENT:
+		case SDL_QUIT:
+		{
+			quit();
+			SDL_Quit();
+			clear();
+			exit(0);
+			break;
+		}
+		case FF_REFRESH_EVENT:
+		{
+			Video::getInstance()->refreshVideo();
+			break;
+		}
+		if( m_quitFlag )
+			break;
+		}
+	}
+}
 
-    // check the video stream was correctly opened
-    if( m_videoStream.m_videoStream )
-    {
-        if( m_videoStream.m_pictQueue.size() == 0 )
-        {
-            sheduleRefresh( 1 );
-        }
-        else
-        {
-            static int count = 0;
-            count++;
-            if( count >= 260 )
-                printf("Breakpoint\n");
-            // get VideoPicture reference using the queue read index
-            videoPicture = m_videoStream.m_pictQueue.getVideoPicture();
+void Player::createDisplay()
+{
+	if( m_display.screen )
+		return;
+	m_display.screen = SDL_CreateWindow(
+		m_windowName.c_str(),
+		SDL_WINDOWPOS_UNDEFINED,
+		SDL_WINDOWPOS_UNDEFINED,
+		m_videoCodec.codecCtx->width / 2,
+		m_videoCodec.codecCtx->height / 2,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI );
+	SDL_GL_SetSwapInterval( 1 );
+	if( !m_display.screen )
+		Utils::displayException( "Couldn't show display window" );
+	m_display.renderer = SDL_CreateRenderer(
+		m_display.screen,
+		-1,
+		SDL_RENDERER_ACCELERATED | 
+		SDL_RENDERER_PRESENTVSYNC | 
+		SDL_RENDERER_TARGETTEXTURE );
+	if( !m_display.renderer )
+		Utils::displayException( "Couldn't create renderer" );
+	m_display.texture = SDL_CreateTexture(
+		m_display.renderer,
+		SDL_PIXELFORMAT_YV12,
+		SDL_TEXTUREACCESS_STREAMING,
+		m_videoCodec.codecCtx->width,
+		m_videoCodec.codecCtx->height
+		);
+	if( !m_display.texture )
+		Utils::displayException( "Couldn't create texture" );
+}
 
-            printf( "Current Frame PTS:\t\t%f\n", videoPicture->pts );
-            printf( "Last Frame PTS:\t\t\t%f\n", m_videoStream.m_frameLastPTS );
+Player* Player::getInstance()
+{
+    if( Player::m_instance == nullptr )
+		Player::m_instance = new Player();
+    return Player::m_instance;
+}
 
-            // get last frame pts
-            pts_delay = videoPicture->pts - m_videoStream.m_frameLastPTS;
+void Player::run( const std::string& filename )
+{
+    m_filename = filename;
+	open();
+	Audio::getInstance()->init( m_audioCodec.codecCtx, m_formatCtx->streams[m_audioStreamNum]);
+	Video::getInstance()->init( m_videoCodec.codecCtx, m_formatCtx->streams[m_videoStreamNum] );
+	m_decodeThread = std::thread( &Player::decodeThread, this );
+	Audio::getInstance()->startPlaying();
+	Video::getInstance()->startVideoThread();
+	sheduleRefresh( 39 );
+	SDLEventLoop();
+}
 
-            printf( "PTS Delay:\t\t\t\t%f\n", pts_delay );
+void Player::quit()
+{
+	Video::getInstance()->quit();
+	m_quitFlag == true;
+	if( m_decodeThread.joinable() )
+		m_decodeThread.join();
+}
 
-            // if the obtained delay is incorrect
-            if( pts_delay <= 0 || pts_delay >= 1.0 )
-            {
-                // use the previously calculated delay
-                pts_delay = m_videoStream.m_frameLastDelay;
-            }
 
-            printf( "Corrected PTS Delay:\t%f\n", pts_delay );
+void Player::open()
+{
+	int ret = avformat_open_input( &m_formatCtx, m_filename.c_str(), NULL, NULL );
+	if( ret != 0 )
+		Utils::displayFFMpegException( ret );
+	ret = avformat_find_stream_info( m_formatCtx, NULL );
+	if( ret < 0 )
+		Utils::displayFFMpegException( ret );
+	findStreamNumbers();
+	getCodecParams();
+	readCodec( m_videoCodec );
+	readCodec( m_audioCodec );
 
-            // save delay information for the next time
-            m_videoStream.m_frameLastDelay = pts_delay;
-            m_videoStream.m_frameLastPTS = videoPicture->pts;
-            // update delay to stay in sync with the audio
-            audio_ref_clock = m_audioStream.getAudioClock();
+}
 
-            printf( "Audio Ref Clock:\t\t%f\n", audio_ref_clock );
 
-            audio_video_delay = videoPicture->pts - audio_ref_clock;
+void Player::findStreamNumbers()
+{
+	for( unsigned int i = 0; i < m_formatCtx->nb_streams; i++ )
+		if( m_formatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
+		{
+			m_videoStreamNum = i;
+			break;
+		}
+	for( unsigned int i = 0; i < m_formatCtx->nb_streams; i++ )
+		if( m_formatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
+		{
+			m_audioStreamNum = i;
+			break;
+		}
+	if( m_videoStreamNum == -1 )
+		Utils::displayException( "Video stream not found" );
+	if( m_audioStreamNum == -1 )
+		Utils::displayException( "Audio stream not found" );
+}
 
-            printf( "Audio Video Delay:\t\t%f\n", audio_video_delay );
+void Player::clear()
+{
+	// close context info
+	avformat_close_input( &m_formatCtx );
+	avcodec_free_context( &m_audioCodec.codecCtx );
+	avcodec_free_context( &m_videoCodec.codecCtx );
 
-            // skip or repeat the frame taking into account the delay
-            sync_threshold = (pts_delay > AV_SYNC_THRESHOLD) ? pts_delay : AV_SYNC_THRESHOLD;
+	// Close the codecs
+	avcodec_close( m_audioCodec.codecCtx );
+	avcodec_close( m_videoCodec.codecCtx );
 
-            printf( "Sync Threshold:\t\t\t%f\n", sync_threshold );
+	// Close the video file
+	avformat_close_input( &m_formatCtx );
+	delete Player::getInstance();
+}
 
-            // check audio video delay absolute value is below sync threshold
-            if( fabs( audio_video_delay ) < AV_NOSYNC_THRESHOLD )
-            {
-                if( audio_video_delay <= -sync_threshold )
-                {
-                    pts_delay = 0;
-                }
-                else if( audio_video_delay >= sync_threshold )
-                {
-                    pts_delay = 2 * pts_delay;  // [2]
-                }
-            }
-
-            printf( "Corrected PTS delay:\t%f\n", pts_delay );
-
-            m_videoStream.m_frameDelay += pts_delay;   // [2]
-
-            // compute the real delay
-            real_delay = m_videoStream.m_frameDelay - (av_gettime() / 1000000.0);
-
-            printf( "Real Delay:\t\t\t\t%f\n", real_delay );
-
-            if( real_delay < 0.010 )
-            {
-                real_delay = 0.010;
-            }
-
-            printf( "Corrected Real Delay:\t%f\n", real_delay );
-
-            sheduleRefresh( (int)(real_delay * 1000 + 0.5) );
-
-            printf( "Next Scheduled Refresh:\t%f\n\n", (double)(real_delay * 1000 + 0.5) );
-
-            videoDisplay();
-
-            m_videoStream.m_pictQueue.decreasePictQueueSize();
-        }
-    }
-    else
-    {
-        sheduleRefresh( 100 );
-    }
+Uint32 Player::SDLRefreshTimer( Uint32 interval, void* )
+{
+	SDL_Event event;
+	event.type = FF_REFRESH_EVENT;
+	SDL_PushEvent( &event );
+	return 0;
 }
 
 void Player::sheduleRefresh( int delay )
 {
-    if( SDL_AddTimer( delay, sdlRefreshTimer, this ) == 0 )
-        printf( "Could not schedule refresh callback: %s.\n.", SDL_GetError() );
+	if( SDL_AddTimer( delay, SDLRefreshTimer, this ) == 0 )
+		printf( "Could not schedule refresh callback: %s.\n.", SDL_GetError() );
 }
 
-int decodeThread( void* arg )
+void Player::displayFrame( AVFrame* frame )
 {
-    Player* player = reinterpret_cast<Player*>( arg );
-    if( avformat_open_input( &player->m_formatCtx, player->m_fileName.c_str(), nullptr, nullptr ) < 0 )
-    {
-        std::cout << "Could not open file " << player->m_fileName << std::endl ;
-        return -1;
-    }
-    if( avformat_find_stream_info( player->m_formatCtx, NULL ) < 0 )
-    {
-        std::cout << "Could not find stream information " << player->m_fileName << std::endl;
-        return -1;
-    }
-    av_dump_format( player->m_formatCtx, 0, player->m_fileName.c_str(), 0 );
+	createDisplay();
+	float aspect_ratio;
+	int w, h, x, y;
+	if( frame )
+	{
+		if( m_videoCodec.codecCtx->sample_aspect_ratio.num == 0 )
+		{
+			aspect_ratio = 0;
+		}
+		else
+		{
+			aspect_ratio = av_q2d( m_videoCodec.codecCtx->sample_aspect_ratio ) * m_videoCodec.codecCtx->width / m_videoCodec.codecCtx->height;
+		}
 
-    if( !player->m_audioStream.findAudioStreamIndex( player->m_formatCtx ) || !player->m_audioStream.openStream( player->m_formatCtx ) )
-    {
-        std::cout << "Could not open audio codec.\n";
-        return player->fail();
-    }
+		if( aspect_ratio <= 0.0 )
+		{
+			aspect_ratio = (float)m_videoCodec.codecCtx->width /
+				(float)m_videoCodec.codecCtx->height;
+		}
 
-    if( !player->m_videoStream.findVideoStreamIndex( player->m_formatCtx ) || !player->m_videoStream.openStream( player->m_formatCtx ) )
-    {
-        std::cout << "Could not open video codec.\n";
-        return player->fail();
-    }
-   
-    if( player->m_audioStream.getIndex() == -1 || player->m_videoStream.getIndex() == -1 )
-    {
-        std::cout << "Could not open codecs " << player->m_fileName << std::endl;
-        return player->fail();
-    }
+		int screen_width;
+		int screen_height;
+		SDL_GetWindowSize( m_display.screen, &screen_width, &screen_height );
+		h = screen_height;
+		w = ((int)rint( h * aspect_ratio )) & -3;
+		if( w > screen_width )
+		{
+			w = screen_width;
+			h = ((int)rint( w / aspect_ratio )) & -3;
+		}
 
-    AVPacket* packet = av_packet_alloc();
-    if( packet == NULL )
-    {
-        std::cout << "Could not alloc packet.\n";
-        return -1;
-    }
-    while( true )
-    {
-        if( g_quitFlag )
-            break;
-        if( player->m_audioStream.queueSize() > MAX_AUDIOQ_SIZE || player->m_videoStream.queueSize() > MAX_VIDEOQ_SIZE )
-        {
-            SDL_Delay( 10 );
-            continue;
-        }
-        int ret = av_read_frame( player->m_formatCtx, packet );
-        if( ret < 0 )
-        {
-            if( ret == AVERROR_EOF )
-            {
-                g_quitFlag = true;
-                break;
-            }
-            else if( player->m_formatCtx->pb->error == 0 )
-            {
-                SDL_Delay( 10 );
-                continue;
-            }
-            else
-                break;
-        }
-        if( packet->stream_index == player->m_audioStream.getIndex() )
-            player->m_audioStream.addToQueue( packet );
-        else if( packet->stream_index == player->m_videoStream.getIndex() )
-            player->m_videoStream.addToQueue( packet );
-        else
-            av_packet_unref( packet );
-    }
-    while( !g_quitFlag )
-        SDL_Delay( 100 );
-    avformat_close_input( &player->m_formatCtx );
-    return 0;
+		x = (screen_width - w);
+		y = (screen_height - h);
+		printf(
+			"Frame %c (%d) pts %d dts %d key_frame %d [coded_picture_number %d, display_picture_number %d, %dx%d]\n",
+			av_get_picture_type_char( frame->pict_type ),
+			m_videoCodec.codecCtx->frame_number,
+			frame->pts,
+			frame->pkt_dts,
+			frame->key_frame,
+			frame->coded_picture_number,
+			frame->display_picture_number,
+			frame->width,
+			frame->height
+		);
+		SDL_Rect rect;
+		rect.x = x;
+		rect.y = y;
+		rect.w = 2 * w;
+		rect.h = 2 * h;
+		m_display.mutex.lock();
+		SDL_UpdateYUVTexture(
+			m_display.texture,
+			&rect,
+			frame->data[0],
+			frame->linesize[0],
+			frame->data[1],
+			frame->linesize[1],
+			frame->data[2],
+			frame->linesize[2]
+		);
+		SDL_RenderClear( m_display.renderer );
+		SDL_RenderCopy( m_display.renderer, m_display.texture, NULL, NULL );
+		SDL_RenderPresent( m_display.renderer );
+		m_display.mutex.unlock();
+		av_frame_unref( frame );
+	}
 }
-
-Uint32 sdlRefreshTimer( Uint32 interval, void* player )
-{
-    SDL_Event event;
-    event.type = FF_REFRESH_EVENT;
-    event.user.data1 = player;
-    SDL_PushEvent( &event );
-    return 0;
-}
-
-
-int Player::fail()
-{
-    SDL_Event event;
-    event.type = FF_QUIT_EVENT;
-    SDL_PushEvent( &event );
-    return -1;
-}
-
-void Player::videoDisplay()
-{
-    if( !g_screen.m_screen )
-    {
-        // create a window with the specified position, dimensions, and flags.
-        g_screen.m_screen = SDL_CreateWindow(
-            "FFmpeg SDL Video Player",
-            SDL_WINDOWPOS_UNDEFINED,
-            SDL_WINDOWPOS_UNDEFINED,
-            m_videoStream.m_videoContext->width / 2,
-            m_videoStream.m_videoContext->height / 2,
-            SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI
-        );
-
-        SDL_GL_SetSwapInterval( 1 );
-
-    }
-    // check window was correctly created
-    if( !g_screen.m_screen )
-    {
-        printf( "SDL: could not create window - exiting.\n" );
-        return;
-    }
-
-
-    if( !m_videoStream.m_Renderer )
-    {
-        // create a 2D rendering context for the SDL_Window
-        m_videoStream.m_Renderer = SDL_CreateRenderer( g_screen.m_screen, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE );
-    }
-
-    if( !m_videoStream.m_texture )
-    {
-        // create a texture for a rendering context
-        m_videoStream.m_texture = SDL_CreateTexture(
-            m_videoStream.m_Renderer,
-            SDL_PIXELFORMAT_YV12,
-            SDL_TEXTUREACCESS_STREAMING,
-            m_videoStream.m_videoContext->width,
-            m_videoStream.m_videoContext->height
-        );
-    }
-
-    // reference for the next VideoPicture to be displayed
-    VideoPicture* videoPicture;
-
-    float aspect_ratio;
-
-    int w, h, x, y;
-
-    // get next VideoPicture to be displayed from the VideoPicture queue
-    videoPicture = m_videoStream.m_pictQueue.getVideoPicture();
-
-    if( videoPicture->frame )
-    {
-        if( m_videoStream.m_videoContext->sample_aspect_ratio.num == 0 )
-        {
-            aspect_ratio = 0;
-        }
-        else
-        {
-            aspect_ratio = av_q2d( m_videoStream.m_videoContext->sample_aspect_ratio ) * m_videoStream.m_videoContext->width / m_videoStream.m_videoContext->height;
-        }
-
-        if( aspect_ratio <= 0.0 )
-        {
-            aspect_ratio = (float)m_videoStream.m_videoContext->width /
-                (float)m_videoStream.m_videoContext->height;
-        }
-
-        // get the size of a window's client area
-        int screen_width;
-        int screen_height;
-        SDL_GetWindowSize( g_screen.m_screen, &screen_width, &screen_height );
-
-        // global SDL_Surface height
-        h = screen_height;
-
-        // retrieve width using the calculated aspect ratio and the screen height
-        w = ((int)rint( h * aspect_ratio )) & -3;
-
-        // if the new width is bigger than the screen width
-        if( w > screen_width )
-        {
-            // set the width to the screen width
-            w = screen_width;
-
-            // recalculate height using the calculated aspect ratio and the screen width
-            h = ((int)rint( w / aspect_ratio )) & -3;
-        }
-
-        x = (screen_width - w);
-        y = (screen_height - h);
-            // dump information about the frame being rendered
-        printf(
-                "Frame %c (%d) pts %d dts %d key_frame %d [coded_picture_number %d, display_picture_number %d, %dx%d]\n",
-                av_get_picture_type_char( videoPicture->frame->pict_type ),
-                m_videoStream.m_videoContext->frame_number,
-                videoPicture->frame->pts,
-                videoPicture->frame->pkt_dts,
-                videoPicture->frame->key_frame,
-                videoPicture->frame->coded_picture_number,
-                videoPicture->frame->display_picture_number,
-                videoPicture->frame->width,
-                videoPicture->frame->height
-            );
-            static int c = 0;
-            c++;
-            if( c == 260 )
-                printf( "260\n" );
-
-            // set blit area x and y coordinates, width and height
-            SDL_Rect rect;
-            rect.x = x;
-            rect.y = y;
-            rect.w = 2 * w;
-            rect.h = 2 * h;
-
-            // lock screen mutex
-            g_screen.lock();
-
-            // update the texture with the new pixel data
-            SDL_UpdateYUVTexture(
-                m_videoStream.m_texture,
-                &rect,
-                videoPicture->frame->data[0],
-                videoPicture->frame->linesize[0],
-                videoPicture->frame->data[1],
-                videoPicture->frame->linesize[1],
-                videoPicture->frame->data[2],
-                videoPicture->frame->linesize[2]
-            );
-
-            // clear the current rendering target with the drawing color
-            SDL_RenderClear( m_videoStream.m_Renderer );
-
-            // copy a portion of the texture to the current rendering target
-            SDL_RenderCopy( m_videoStream.m_Renderer, m_videoStream.m_texture, NULL, NULL );
-
-            // update the screen with any rendering performed since the previous call
-            SDL_RenderPresent( m_videoStream.m_Renderer );
-
-            // unlock screen mutex
-            g_screen.unlock();
-    }
-}
-
