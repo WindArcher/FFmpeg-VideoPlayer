@@ -11,26 +11,27 @@ extern "C"
 #include <libswresample/swresample.h>
 }
 #include <SDL2/SDL.h>
+#include <thread>
+#include <stdexcept>
+#include <limits>
+#include <functional>
+
 #include "PacketQueue.h"
+#include "DecodeThreadHandler.h"
 #define SDL_AUDIO_BUFFER_SIZE 1024
 #define MAX_AUDIO_FRAME_SIZE 192000
 void AudioCallback( void* userdata, Uint8* stream, int len );
 class Audio
 {
 public:
-    static Audio* getInstance();
-    ~Audio();
-    void init( AVCodecContext* codecContext, AVStream* stream  );
-    void startPlaying();
+    Audio( DecodeThreadHandler* handler ,AVCodecContext* codecContext, AVFormatContext* formatCtx, int steamNum );
+    ~Audio() = default;
+    void start();
+    void stop();
     double getAudioClock();
-    //Queue
     PacketQueue m_audioQueue;
 private:
-
-    bool m_init = false;
-    friend void AudioCallback( void* codecContext, Uint8* buffer, int bufferSize );
-    static Audio* m_instance;
-
+    DecodeThreadHandler* m_decodeHandler;
     SDL_AudioSpec m_wanted_specs;
     SDL_AudioSpec m_specs;
     //decoded frame buffer
@@ -42,10 +43,8 @@ private:
     //Sync data
     AVStream* m_audioStream = nullptr;
     double m_audioClock{ 0.0 };
-
-    //Audio device???
-    SDL_AudioDeviceID m_dev;
     int decodeFrame( AVCodecContext* codecContext, uint8_t* audioBuffer, int audioBufferSize);
-    int resampleAudio( AVCodecContext* codecContext, AVFrame* decodedFrame, AVSampleFormat outFormat, uint8_t* outBuffer );
+    int audioResampling( AVFrame* decoded_audio_frame, enum AVSampleFormat out_sample_fmt, uint8_t* out_buf );
+    friend void AudioCallback( void* codecContext, Uint8* buffer, int bufferSize );
 };
 

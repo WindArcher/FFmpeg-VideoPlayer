@@ -1,16 +1,16 @@
 #include "SDLWrapper.h"
-#include <iostream>
+#include "SDLException.h"
+
+bool SDLWrapper::m_init = false;
 void SDLWrapper::initSdl()
 {
-	if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER ) )
-		std::cout << ("There is something wrong with your SDL Libs. Couldn't run\n");
+	if( !m_init )
+	{
+		if( SDL_Init( SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER ) )
+			throw SDLException( "There is something wrong with your SDL Libs. Couldn't run\n" );
 #ifdef _WIN32
-	SDL_AudioInit( "directsound" );
+		SDL_AudioInit( "directsound" );
 #endif
-}
-
-void SDLWrapper::openAudio( SDL_AudioSpec* desired, SDL_AudioSpec* obtained )
-{
-	if( SDL_OpenAudio( desired, obtained ) < 0 )
-	 	std::cout << "Failed to open audio\n";
+		m_init = true;
+	}
 }

@@ -14,6 +14,10 @@ extern "C"
 #include <condition_variable>
 #include <deque>
 #include <memory>
+#define MAX_AUDIOQ_SIZE (5 * 16 * 1024)
+#define MAX_VIDEOQ_SIZE (5 * 256 * 1024)
+#define MIN_AUDIOQ_SIZE (5 * 4 * 1024)
+#define MIN_VIDEOQ_SIZE (5 * 64 * 1024 )
 
 struct AVPacketDeleter
 {
@@ -25,8 +29,10 @@ class PacketQueue
 public:
     bool put( AVPacket* packet );
     AVPacket* get( bool blocking );
+    int size() { return m_totalSize; }
 private:
     std::deque<AVPacketPtr> m_packetQueue;
+    int m_totalSize = 0;
     std::mutex m_mutex;
     std::condition_variable m_cond;
 };

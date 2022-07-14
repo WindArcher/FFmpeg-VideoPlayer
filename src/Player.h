@@ -13,10 +13,10 @@ extern "C"
 #include <string>
 #include <thread>
 #include <mutex>
-#include "SDLWrapper.h"
-#include "PacketQueue.h"
+#include <memory>
 #include "Audio.h"
 #include "Video.h"
+#include "DecodeThreadHandler.h"
 
 #define FF_QUIT_EVENT (SDL_USEREVENT + 1)
 #define FF_REFRESH_EVENT (SDL_USEREVENT)
@@ -33,25 +33,24 @@ struct CodecData
     AVCodecContext* codecCtx = nullptr;
     AVCodec* codec = nullptr;
 };
-class Player
+class Player : public DecodeThreadHandler
 {
 public:
-    static Player* getInstance();
-    void run( const std::string& filename );
-    void sheduleRefresh( int delay );
-    void displayFrame( AVFrame* frame );
-    void quit();
-    void clear();
-private:
     Player();
-    static Player* m_instance;
+    ~Player();
+    void run( const std::string& filename );
+    virtual void startThread();
+    virtual void stopThread();
+private:
     std::string m_filename;
     std::string m_windowName = "SDLPlayer";
     int m_videoStreamNum = -1, m_audioStreamNum = -1;
     AVFormatContext* m_formatCtx = nullptr;
     CodecData m_audioCodec,m_videoCodec;
     SDLDisplay m_display;
-    bool m_quitFlag;
+    std::unique_ptr<Video> m_video;
+    std::unique_ptr<Audio> m_audio;
+    bool m_quitFlag = false, m_decodeFinished = true, m_pause = false;
     std::thread m_decodeThread;
     void open();
     void findStreamNumbers();
@@ -59,6 +58,10 @@ private:
     void readCodec( CodecData& codecData );
     void createDisplay();
     void decodeThread();
+    void refreshVideo();
     void SDLEventLoop();
+    void sheduleRefresh( int delay );
+    void displayFrame( AVFrame* frame );
+    void quit();
     static Uint32 SDLRefreshTimer( Uint32 interval, void* );    
 };

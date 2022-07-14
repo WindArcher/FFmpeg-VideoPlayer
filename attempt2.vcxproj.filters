@@ -17,9 +17,6 @@
     <ClInclude Include="src\Audio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\AudioCallback.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\PacketQueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -32,18 +29,17 @@
     <ClInclude Include="src\SDLWrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Utils.h">
+    <ClInclude Include="src\Video.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Video.h">
+    <ClInclude Include="src\FFmpegException.h" />
+    <ClInclude Include="src\SDLException.h" />
+    <ClInclude Include="src\DecodeThreadHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Audio.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\AudioCallback.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp">
@@ -59,9 +55,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\SDLWrapper.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Video.cpp">

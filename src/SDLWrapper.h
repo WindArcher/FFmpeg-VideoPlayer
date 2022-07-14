@@ -8,8 +8,9 @@ class SDLWrapper
 {
 public:
     static void initSdl();
-    static void openAudio( SDL_AudioSpec* desired, SDL_AudioSpec* obtained );
+    static bool init() { return m_init; }
 private:
     SDLWrapper() = default;
+    static bool m_init;
 };
 

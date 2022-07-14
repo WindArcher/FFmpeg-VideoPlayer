@@ -3,7 +3,6 @@ extern "C"
 {
 #include <libavutil/imgutils.h>
 }
-#include "Utils.h"
 
 void PictureQueue::putFrame( AVFrame* frame, SwsContext* swsCtx, int width, int height, double pts )
 {
@@ -35,6 +34,7 @@ void PictureQueue::putFrame( AVFrame* frame, SwsContext* swsCtx, int width, int 
             m_pictQueue.back().frame.get()->linesize
         );
         m_pictQueue.back().pts = pts;
+        m_totalSize += frame->pkt_size;
     }
     m_cond.notify_one();
 }
@@ -47,6 +47,7 @@ VideoPicture PictureQueue::getPicture( bool blocking )
         if( !m_pictQueue.empty() )
         {
             VideoPicture pict;
+            m_totalSize = pict.frame.get()->pkt_size;
             av_frame_move_ref(pict.frame.get(), m_pictQueue.front().frame.get());
             pict.pts = m_pictQueue.front().pts;
             m_pictQueue.pop_front();

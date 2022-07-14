@@ -1,10 +1,25 @@
 #include "Player.h"
-#include "Utils.h"
-Player* Player::m_instance = 0;
-
+#include "FFmpegException.h"
+#include "SDLException.h"
+#include "SDLWrapper.h"
 Player::Player()
 {
-    SDLWrapper::initSdl();
+	if( !SDLWrapper::init() )
+		SDLWrapper::initSdl();
+}
+
+Player::~Player()
+{
+	m_video->quit();
+	stopThread();
+	avformat_close_input( &m_formatCtx );
+	avcodec_free_context( &m_audioCodec.codecCtx );
+	avcodec_free_context( &m_videoCodec.codecCtx );
+	avcodec_parameters_free( &m_audioCodec.params);
+	avcodec_parameters_free( &m_videoCodec.params );
+	avcodec_close( m_audioCodec.codecCtx );
+	avcodec_close( m_videoCodec.codecCtx );
+	avformat_close_input( &m_formatCtx );
 }
 
 void Player::getCodecParams()
@@ -17,22 +32,23 @@ void Player::readCodec( CodecData& codecData )
 {
 	codecData.codec = avcodec_find_decoder( codecData.params->codec_id );
 	if( !codecData.codec )
-		Utils::displayException( "Cannot find decoder" );
+		throw std::exception( "Cannot find decoder" );
 	codecData.codecCtx = avcodec_alloc_context3( codecData.codec );
 	if( codecData.codecCtx == nullptr )
-		Utils::displayException( "Failed to allocate context decoder" );
+		throw std::exception( "Failed to allocate context decoder" );
 	if( avcodec_parameters_to_context( codecData.codecCtx, codecData.params ) < 0 )
-		Utils::displayException( "Failed to transfer parameters to context" );
+		throw std::exception( "Failed to transfer parameters to context" );
 	if( avcodec_open2( codecData.codecCtx,codecData.codec,NULL) < 0 )
-		Utils::displayException( "Failed to open codec" );
+		throw std::exception( "Failed to open codec" );
 }
 
 void Player::decodeThread()
 {
+	m_decodeFinished = false;
 	AVPacket* packet = av_packet_alloc();
 	if( packet == NULL )
-		Utils::displayException( "Could not alloc packet.\n" );
-	while( !m_quitFlag )
+		throw std::exception( "Could not alloc packet.\n" );
+	while( !m_quitFlag || ( m_audio->m_audioQueue.size() >= MAX_AUDIOQ_SIZE  && m_video->m_videoQueue.size() >= MAX_VIDEOQ_SIZE) )
 	{
 		int ret = av_read_frame( m_formatCtx, packet );
 		if( ret < 0 )
@@ -47,13 +63,28 @@ void Player::decodeThread()
 			else
 				break;
 		}
-		static int packeetNum = 0;
 		if( packet->stream_index == m_audioStreamNum )
-			Audio::getInstance()->m_audioQueue.put(packet);
+			m_audio->m_audioQueue.put(packet);
 		else if( packet->stream_index == m_videoStreamNum )
-			Video::getInstance()->m_videoQueue.put( packet );
+			m_video->m_videoQueue.put( packet );
 		else
 			av_packet_unref( packet );
+	}
+	m_decodeFinished = true;
+	av_packet_free( &packet );
+}
+
+void Player::refreshVideo()
+{
+	if( m_video->m_videoQueue.size() == 0 || m_pause == true )
+		sheduleRefresh( 1 );
+	else
+	{
+		VideoPicture pict{ m_video->m_pictQ.getPicture( true ) };
+		double realDelay = m_video->getRealDelay( pict, m_audio->getAudioClock() );
+		sheduleRefresh( (int)(realDelay * 1000 + 0.5) );
+		printf( "Next Scheduled Refresh:\t%f\n\n", (double)(realDelay * 1000 + 0.5) );
+		displayFrame( pict.frame.get() );
 	}
 }
 
@@ -76,8 +107,11 @@ void Player::SDLEventLoop()
 			case SDLK_SPACE:
 			{
 				pause = !pause;
-				Video::getInstance()->setPause( pause );
-				SDL_PauseAudio( pause );
+				m_pause = pause;
+				if( pause )
+					m_audio->stop();
+				else
+					m_audio->start();
 				break;
 			}
 			}
@@ -88,13 +122,12 @@ void Player::SDLEventLoop()
 		{
 			quit();
 			SDL_Quit();
-			clear();
 			exit(0);
 			break;
 		}
 		case FF_REFRESH_EVENT:
 		{
-			Video::getInstance()->refreshVideo();
+			refreshVideo();
 			break;
 		}
 		if( m_quitFlag )
@@ -116,7 +149,7 @@ void Player::createDisplay()
 		SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI );
 	SDL_GL_SetSwapInterval( 1 );
 	if( !m_display.screen )
-		Utils::displayException( "Couldn't show display window" );
+		throw std::exception( "Couldn't show display window" );
 	m_display.renderer = SDL_CreateRenderer(
 		m_display.screen,
 		-1,
@@ -124,7 +157,7 @@ void Player::createDisplay()
 		SDL_RENDERER_PRESENTVSYNC | 
 		SDL_RENDERER_TARGETTEXTURE );
 	if( !m_display.renderer )
-		Utils::displayException( "Couldn't create renderer" );
+		throw std::exception( "Couldn't create renderer" );
 	m_display.texture = SDL_CreateTexture(
 		m_display.renderer,
 		SDL_PIXELFORMAT_YV12,
@@ -133,46 +166,57 @@ void Player::createDisplay()
 		m_videoCodec.codecCtx->height
 		);
 	if( !m_display.texture )
-		Utils::displayException( "Couldn't create texture" );
+		throw std::exception( "Couldn't create texture" );
 }
 
-Player* Player::getInstance()
-{
-    if( Player::m_instance == nullptr )
-		Player::m_instance = new Player();
-    return Player::m_instance;
-}
 
 void Player::run( const std::string& filename )
 {
     m_filename = filename;
 	open();
-	Audio::getInstance()->init( m_audioCodec.codecCtx, m_formatCtx->streams[m_audioStreamNum]);
-	Video::getInstance()->init( m_videoCodec.codecCtx, m_formatCtx->streams[m_videoStreamNum] );
+	m_audio = std::make_unique<Audio>( this, m_audioCodec.codecCtx, m_formatCtx, m_audioStreamNum );
+	m_video = std::make_unique<Video>( this, m_videoCodec.codecCtx, m_formatCtx, m_videoStreamNum );
 	m_decodeThread = std::thread( &Player::decodeThread, this );
-	Audio::getInstance()->startPlaying();
-	Video::getInstance()->startVideoThread();
+	m_video->startVideoThread();
+	m_audio->start();
 	sheduleRefresh( 39 );
 	SDLEventLoop();
 }
 
 void Player::quit()
 {
-	Video::getInstance()->quit();
+	m_audio->stop();
+	m_video->quit();
+
 	m_quitFlag == true;
 	if( m_decodeThread.joinable() )
 		m_decodeThread.join();
 }
 
+void Player::startThread()
+{
+	if( !m_decodeFinished )
+		return;
+	if( m_decodeThread.joinable() )
+		m_decodeThread.join();
+	m_decodeThread = std::thread( &Player::decodeThread, this );
+}
+
+void Player::stopThread()
+{
+	m_quitFlag = true;
+	if( m_decodeThread.joinable() )
+		m_decodeThread.join();
+}
 
 void Player::open()
 {
 	int ret = avformat_open_input( &m_formatCtx, m_filename.c_str(), NULL, NULL );
 	if( ret != 0 )
-		Utils::displayFFMpegException( ret );
+		throw FFmpegException( "Opent input error\n", ret);
 	ret = avformat_find_stream_info( m_formatCtx, NULL );
 	if( ret < 0 )
-		Utils::displayFFMpegException( ret );
+		throw FFmpegException( "Find stream input error\n", ret );
 	findStreamNumbers();
 	getCodecParams();
 	readCodec( m_videoCodec );
@@ -196,25 +240,9 @@ void Player::findStreamNumbers()
 			break;
 		}
 	if( m_videoStreamNum == -1 )
-		Utils::displayException( "Video stream not found" );
+		throw std::exception( "Video stream not found" );
 	if( m_audioStreamNum == -1 )
-		Utils::displayException( "Audio stream not found" );
-}
-
-void Player::clear()
-{
-	// close context info
-	avformat_close_input( &m_formatCtx );
-	avcodec_free_context( &m_audioCodec.codecCtx );
-	avcodec_free_context( &m_videoCodec.codecCtx );
-
-	// Close the codecs
-	avcodec_close( m_audioCodec.codecCtx );
-	avcodec_close( m_videoCodec.codecCtx );
-
-	// Close the video file
-	avformat_close_input( &m_formatCtx );
-	delete Player::getInstance();
+		throw std::exception( "Audio stream not found" );
 }
 
 Uint32 Player::SDLRefreshTimer( Uint32 interval, void* )
@@ -228,7 +256,7 @@ Uint32 Player::SDLRefreshTimer( Uint32 interval, void* )
 void Player::sheduleRefresh( int delay )
 {
 	if( SDL_AddTimer( delay, SDLRefreshTimer, this ) == 0 )
-		printf( "Could not schedule refresh callback: %s.\n.", SDL_GetError() );
+		throw SDLException("Could not schedule refresh callback");
 }
 
 void Player::displayFrame( AVFrame* frame )
@@ -298,6 +326,5 @@ void Player::displayFrame( AVFrame* frame )
 		SDL_RenderCopy( m_display.renderer, m_display.texture, NULL, NULL );
 		SDL_RenderPresent( m_display.renderer );
 		m_display.mutex.unlock();
-		av_frame_unref( frame );
 	}
 }

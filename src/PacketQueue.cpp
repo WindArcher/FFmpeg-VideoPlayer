@@ -10,6 +10,7 @@ bool PacketQueue::put( AVPacket* packet )
             m_packetQueue.pop_back();
             return false;
         }
+        m_totalSize += static_cast<unsigned int>(m_packetQueue.back()->size);
     }
     m_cond.notify_one();
     return true;
@@ -23,6 +24,7 @@ AVPacket* PacketQueue::get( bool blocking )
         if( !m_packetQueue.empty() )
         {
             AVPacket* pkt = av_packet_alloc();
+            m_totalSize -= static_cast<unsigned int>(m_packetQueue.front()->size);
             av_packet_move_ref( pkt, m_packetQueue.front().get() );
             m_packetQueue.pop_front();
             return pkt;

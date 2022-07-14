@@ -31,6 +31,7 @@ public:
     VideoPicture getPicture( bool blocking );
     int size() { return m_pictQueue.size(); }
 private:
+    int m_totalSize{0};
     std::deque<VideoPicture> m_pictQueue;
     std::mutex m_mutex;
     std::condition_variable m_cond;
