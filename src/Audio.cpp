@@ -150,7 +150,7 @@ void AudioCallback( void* audio, Uint8* buffer, int bufferSize )
             audioSize = pAudio->decodeFrame( pAudio->m_audioContext,pAudio->audioBuf,pAudio->audioBufSize );
             if( audioSize < 0 )
             {
-               pAudio->audioBufSize = 1024;
+                pAudio->audioBufSize = 1024;
                 memset(pAudio->audioBuf, 0,pAudio->audioBufSize );
                 printf( "audio_decode_frame() failed.\n" );
             }
@@ -164,7 +164,7 @@ void AudioCallback( void* audio, Uint8* buffer, int bufferSize )
         memcpy( buffer, (uint8_t*)pAudio->audioBuf + pAudio->audioBufIndex, len1 );
         bufferSize -= len1;
         buffer += len1;
-       pAudio->audioBufIndex += len1;
+        pAudio->audioBufIndex += len1;
     }
 }
 

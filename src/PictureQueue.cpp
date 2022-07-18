@@ -33,7 +33,7 @@ void PictureQueue::putFrame( AVFrame* frame, SwsContext* swsCtx, int width, int 
             m_pictQueue.back().frame.get()->data,
             m_pictQueue.back().frame.get()->linesize
         );
-        m_pictQueue.back().pts = pts;
+        //m_pictQueue.back().pts = pts;
         m_totalSize += frame->pkt_size;
     }
     m_cond.notify_one();
@@ -58,4 +58,10 @@ VideoPicture PictureQueue::getPicture( bool blocking )
         else
             m_cond.wait( lock );
     }
+}
+
+void PictureQueue::clear()
+{
+    std::unique_lock<std::mutex> lock{ m_mutex };
+    m_pictQueue.clear();
 }

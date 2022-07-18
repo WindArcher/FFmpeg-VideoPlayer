@@ -16,7 +16,7 @@ bool PacketQueue::put( AVPacket* packet )
     return true;
 }
 
-AVPacket* PacketQueue::get( bool blocking )
+AVPacket* PacketQueue::get( bool blocking, const bool* quitFlag )
 {
     std::unique_lock<std::mutex> lock{ m_mutex };
     while( true )
@@ -29,9 +29,16 @@ AVPacket* PacketQueue::get( bool blocking )
             m_packetQueue.pop_front();
             return pkt;
         }
-        else if( !blocking && m_packetQueue.empty() )
+        else if( !blocking || quitFlag ? &quitFlag : false )
             return nullptr;
         else
             m_cond.wait( lock );
     }
+}
+
+void PacketQueue::clear()
+{
+    std::unique_lock<std::mutex> lock{ m_mutex };
+    m_packetQueue.clear();
+    m_totalSize = 0;
 }

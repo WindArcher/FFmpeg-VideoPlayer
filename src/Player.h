@@ -17,8 +17,8 @@ extern "C"
 #include "Audio.h"
 #include "Video.h"
 #include "DecodeThreadHandler.h"
+#include "SDLWrapper.h"
 
-#define FF_QUIT_EVENT (SDL_USEREVENT + 1)
 #define FF_REFRESH_EVENT (SDL_USEREVENT)
 struct SDLDisplay
 {
@@ -27,20 +27,22 @@ struct SDLDisplay
     SDL_Texture* texture = nullptr;
     std::mutex mutex;
 };
+
 struct CodecData
 {
     AVCodecParameters* params = nullptr;
     AVCodecContext* codecCtx = nullptr;
     AVCodec* codec = nullptr;
 };
+
 class Player : public DecodeThreadHandler
 {
 public:
     Player();
     ~Player();
     void run( const std::string& filename );
-    virtual void startThread();
-    virtual void stopThread();
+    virtual bool startThread();
+    virtual bool stopThread();
 private:
     std::string m_filename;
     std::string m_windowName = "SDLPlayer";
@@ -50,8 +52,9 @@ private:
     SDLDisplay m_display;
     std::unique_ptr<Video> m_video;
     std::unique_ptr<Audio> m_audio;
-    bool m_quitFlag = false, m_decodeFinished = true, m_pause = false;
+    bool m_quitFlag = false, m_decodeFinished = false, m_pause = false, m_init = false, m_finish = false;
     std::thread m_decodeThread;
+    SDL_TimerID m_timer;
     void open();
     void findStreamNumbers();
     void getCodecParams();
@@ -59,9 +62,13 @@ private:
     void createDisplay();
     void decodeThread();
     void refreshVideo();
+    void stopDisplay();
+    void startDisplay();
     void SDLEventLoop();
     void sheduleRefresh( int delay );
     void displayFrame( AVFrame* frame );
     void quit();
+    int64_t getCurrentPos();
+    void streamSeak( int shift );
     static Uint32 SDLRefreshTimer( Uint32 interval, void* );    
 };

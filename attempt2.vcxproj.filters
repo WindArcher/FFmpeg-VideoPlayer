@@ -32,13 +32,13 @@
     <ClInclude Include="src\Video.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\DecodeThreadHandler.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\FFmpegException.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\SDLException.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\DecodeThreadHandler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

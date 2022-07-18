@@ -40,9 +40,9 @@ private:
     int audioBufIndex = 0;
 
     AVCodecContext* m_audioContext;
-    //Sync data
     AVStream* m_audioStream = nullptr;
     double m_audioClock{ 0.0 };
+
     int decodeFrame( AVCodecContext* codecContext, uint8_t* audioBuffer, int audioBufferSize);
     int audioResampling( AVFrame* decoded_audio_frame, enum AVSampleFormat out_sample_fmt, uint8_t* out_buf );
     friend void AudioCallback( void* codecContext, Uint8* buffer, int bufferSize );

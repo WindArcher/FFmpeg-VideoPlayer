@@ -28,8 +28,9 @@ class PacketQueue
 {
 public:
     bool put( AVPacket* packet );
-    AVPacket* get( bool blocking );
+    AVPacket* get( bool blocking, const bool* quitFlag = nullptr );
     int size() { return m_totalSize; }
+    void clear();
 private:
     std::deque<AVPacketPtr> m_packetQueue;
     int m_totalSize = 0;

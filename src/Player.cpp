@@ -1,7 +1,6 @@
 #include "Player.h"
 #include "FFmpegException.h"
 #include "SDLException.h"
-#include "SDLWrapper.h"
 Player::Player()
 {
 	if( !SDLWrapper::init() )
@@ -10,7 +9,8 @@ Player::Player()
 
 Player::~Player()
 {
-	m_video->quit();
+	if( m_video )
+		m_video->quit();
 	stopThread();
 	avformat_close_input( &m_formatCtx );
 	avcodec_free_context( &m_audioCodec.codecCtx );
@@ -54,7 +54,10 @@ void Player::decodeThread()
 		if( ret < 0 )
 		{
 			if( ret == AVERROR_EOF )
+			{
+				m_finish = true;
 				break;
+			}
 			else if( m_formatCtx->pb->error == 0 )
 			{
 				SDL_Delay( 10 );
@@ -70,21 +73,37 @@ void Player::decodeThread()
 		else
 			av_packet_unref( packet );
 	}
-	m_decodeFinished = true;
 	av_packet_free( &packet );
+	m_decodeFinished = true;
 }
 
 void Player::refreshVideo()
 {
-	if( m_video->m_videoQueue.size() == 0 || m_pause == true )
-		sheduleRefresh( 1 );
+	if( m_video->m_pictQ.size() == 0 || m_pause )
+	{
+		if( m_finish && (m_video->m_videoQueue.size() == 0 ) )
+		{
+			SDL_Event event;
+			event.type = SDL_QUIT;
+			SDL_PushEvent( &event );
+		}
+		else
+			sheduleRefresh( 1 );
+	}
 	else
 	{
 		VideoPicture pict{ m_video->m_pictQ.getPicture( true ) };
 		double realDelay = m_video->getRealDelay( pict, m_audio->getAudioClock() );
+		if( realDelay == -1 )
+		{
+			sheduleRefresh( 1 );
+			return;
+		}
 		sheduleRefresh( (int)(realDelay * 1000 + 0.5) );
 		printf( "Next Scheduled Refresh:\t%f\n\n", (double)(realDelay * 1000 + 0.5) );
 		displayFrame( pict.frame.get() );
+		if( m_video->m_pictQ.size() <= 60 )
+			m_video->startVideoThread();
 	}
 }
 
@@ -92,6 +111,7 @@ void Player::SDLEventLoop()
 {
 	bool pause = false;
 	SDL_Event event;
+	
 	while( true )
 	{
 		if( SDL_WaitEvent( &event ) == 0 )
@@ -109,20 +129,47 @@ void Player::SDLEventLoop()
 				pause = !pause;
 				m_pause = pause;
 				if( pause )
+				{
+					SDL_RemoveTimer( m_timer );
 					m_audio->stop();
+				}
 				else
+				{
+					sheduleRefresh( 1);
+					m_video->resetFrameDelay();
 					m_audio->start();
+				}
+				break;
+			}
+			case SDLK_RIGHT:
+			{
+				streamSeak( 10 );
+				break;
+			}
+			case SDLK_LEFT:
+			{
+				streamSeak( -10 );
+				break;
+			}
+			case SDLK_UP:
+			{
+				streamSeak( 60 );
+				break;
+			}
+			case SDLK_DOWN:
+			{
+				streamSeak( -60 );
 				break;
 			}
 			}
 			break;
 		}
-		case FF_QUIT_EVENT:
 		case SDL_QUIT:
 		{
 			quit();
+			SDL_DestroyWindow( m_display.screen );
 			SDL_Quit();
-			exit(0);
+			exit( 0 );
 			break;
 		}
 		case FF_REFRESH_EVENT:
@@ -133,6 +180,7 @@ void Player::SDLEventLoop()
 		if( m_quitFlag )
 			break;
 		}
+
 	}
 }
 
@@ -176,7 +224,7 @@ void Player::run( const std::string& filename )
 	open();
 	m_audio = std::make_unique<Audio>( this, m_audioCodec.codecCtx, m_formatCtx, m_audioStreamNum );
 	m_video = std::make_unique<Video>( this, m_videoCodec.codecCtx, m_formatCtx, m_videoStreamNum );
-	m_decodeThread = std::thread( &Player::decodeThread, this );
+	startThread();
 	m_video->startVideoThread();
 	m_audio->start();
 	sheduleRefresh( 39 );
@@ -185,28 +233,69 @@ void Player::run( const std::string& filename )
 
 void Player::quit()
 {
-	m_audio->stop();
+	//m_audio->stop();
 	m_video->quit();
-
 	m_quitFlag == true;
 	if( m_decodeThread.joinable() )
 		m_decodeThread.join();
 }
 
-void Player::startThread()
+int64_t Player::getCurrentPos()
 {
-	if( !m_decodeFinished )
-		return;
-	if( m_decodeThread.joinable() )
-		m_decodeThread.join();
-	m_decodeThread = std::thread( &Player::decodeThread, this );
+	return static_cast<int64_t>( m_audio->getAudioClock() * AV_TIME_BASE );
 }
 
-void Player::stopThread()
+void Player::streamSeak( int shift )
+{
+	int seekFlag = shift < 0 ? AVSEEK_FLAG_BACKWARD : 0;
+	int64_t videoPos, audioPos, currentPos;
+	AVRational timeBaseQ{ 1, AV_TIME_BASE };
+	currentPos = getCurrentPos();
+	currentPos += shift* AV_TIME_BASE;
+	if( currentPos < m_formatCtx->duration && currentPos >= 0)
+	{
+		m_finish = false;
+		stopDisplay();
+		m_video->stopVideoThread();
+		stopThread();
+		m_video->m_videoQueue.clear();
+		m_video->m_pictQ.clear();
+		m_audio->m_audioQueue.clear();
+		videoPos = av_rescale_q( currentPos, timeBaseQ, m_formatCtx->streams[m_videoStreamNum]->time_base );
+		audioPos = av_rescale_q( currentPos, timeBaseQ, m_formatCtx->streams[m_audioStreamNum]->time_base );
+		int ret;
+		if( m_formatCtx->streams[m_audioStreamNum] && (ret = av_seek_frame( m_formatCtx, m_audioStreamNum, audioPos, seekFlag )) > 0 )
+			throw FFmpegException( "Seek exception\n", ret );
+		if( m_formatCtx->streams[m_videoStreamNum] && (ret = av_seek_frame( m_formatCtx, m_videoStreamNum, videoPos, seekFlag )) > 0 )
+			throw FFmpegException( "Seek exception\n", ret );
+		startThread();
+		m_video->startVideoThread();
+		std::this_thread::sleep_for( std::chrono::milliseconds( 500 ) );
+		startDisplay();
+	}
+	
+}
+
+bool Player::startThread()
+{
+	if( m_init && m_finish )
+		return false;
+	if( !m_decodeFinished && m_init )
+		return false;
+	if( m_decodeThread.joinable() )
+		m_decodeThread.join();
+	m_init = true;
+	m_quitFlag = false;
+	m_decodeThread = std::thread( &Player::decodeThread, this );
+	return true;
+}
+
+bool Player::stopThread()
 {
 	m_quitFlag = true;
 	if( m_decodeThread.joinable() )
 		m_decodeThread.join();
+	return true;
 }
 
 void Player::open()
@@ -221,7 +310,6 @@ void Player::open()
 	getCodecParams();
 	readCodec( m_videoCodec );
 	readCodec( m_audioCodec );
-
 }
 
 
@@ -255,7 +343,8 @@ Uint32 Player::SDLRefreshTimer( Uint32 interval, void* )
 
 void Player::sheduleRefresh( int delay )
 {
-	if( SDL_AddTimer( delay, SDLRefreshTimer, this ) == 0 )
+	m_timer = SDL_AddTimer( delay, SDLRefreshTimer, this );
+	if(  !m_timer )
 		throw SDLException("Could not schedule refresh callback");
 }
 
@@ -295,7 +384,7 @@ void Player::displayFrame( AVFrame* frame )
 		x = (screen_width - w);
 		y = (screen_height - h);
 		printf(
-			"Frame %c (%d) pts %d dts %d key_frame %d [coded_picture_number %d, display_picture_number %d, %dx%d]\n",
+			"Frame %c (%d) pts %d dts %d key_frame %d [coded_picture_number %d, display_picture_number %d, %dx%d]\n\n---------------------------------------------\n",
 			av_get_picture_type_char( frame->pict_type ),
 			m_videoCodec.codecCtx->frame_number,
 			frame->pts,
@@ -327,4 +416,18 @@ void Player::displayFrame( AVFrame* frame )
 		SDL_RenderPresent( m_display.renderer );
 		m_display.mutex.unlock();
 	}
+	if( m_videoCodec.codecCtx->frame_number >= 160 );
+}
+
+void Player::stopDisplay()
+{
+	SDL_RemoveTimer( m_timer );
+	m_audio->stop();
+}
+
+void Player::startDisplay()
+{
+	m_video->resetFrameDelay();
+	m_audio->start();
+	sheduleRefresh( 1 );	
 }

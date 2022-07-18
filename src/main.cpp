@@ -1,5 +1,7 @@
 #include "Player.h"
 #include <iostream>
+#include "SDLException.h"
+#include "FFmpegException.h"
 int main( int argc, char* argv[] )
 {
     if( argc < 2 )
@@ -11,6 +13,14 @@ int main( int argc, char* argv[] )
     {
         Player player;
         player.run( argv[1] );
+    }
+    catch( SDLException& e )
+    {
+        std::cerr << e.what();
+    }
+    catch( FFmpegException& e )
+    {
+        std::cerr << e.what();
     }
     catch( std::exception& e )
     {

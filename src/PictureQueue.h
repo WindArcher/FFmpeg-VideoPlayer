@@ -30,6 +30,7 @@ public:
     void putFrame( AVFrame* frame,SwsContext* swsCtx, int width, int height, double pts );
     VideoPicture getPicture( bool blocking );
     int size() { return m_pictQueue.size(); }
+    void clear();
 private:
     int m_totalSize{0};
     std::deque<VideoPicture> m_pictQueue;

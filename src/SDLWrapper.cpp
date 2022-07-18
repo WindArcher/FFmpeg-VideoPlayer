@@ -12,5 +12,6 @@ void SDLWrapper::initSdl()
 		SDL_AudioInit( "directsound" );
 #endif
 		m_init = true;
+		//atexit( SDL_Quit );
 	}
 }

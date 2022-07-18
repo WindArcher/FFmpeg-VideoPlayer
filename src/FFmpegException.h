@@ -12,12 +12,12 @@ public:
     {
         char error_buf[128];
         av_strerror( m_code, error_buf, 128 );
-        char ret[512];
-        snprintf( ret, sizeof ret, "%s%s%s", "SDL Exeption:\n", m_msg, error_buf );
-        return ret;
+        snprintf( m_buffer, sizeof m_buffer, "%s%s%s", "SDL Exeption:\n", m_msg, error_buf );
+        return m_buffer;
     }
 
 private:
     const char* m_msg;
     int m_code;
+    char m_buffer[512]{'\0'};
 };

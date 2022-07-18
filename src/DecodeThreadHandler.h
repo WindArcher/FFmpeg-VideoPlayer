@@ -2,6 +2,6 @@
 class DecodeThreadHandler
 {
 public:
-    virtual void startThread() = 0;
-    virtual void stopThread() = 0;
+    virtual bool startThread() = 0;
+    virtual bool stopThread() = 0;
 };
