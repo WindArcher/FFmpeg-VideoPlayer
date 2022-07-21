@@ -1,5 +1,5 @@
 *.exe
 *.pdb
-*/x64
 /.vs
 *.user
+/build
