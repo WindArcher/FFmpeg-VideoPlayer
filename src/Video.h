@@ -10,9 +10,9 @@ extern "C"
 #include <libswscale/swscale.h>
 #include <libswresample/swresample.h>
 }
-#include "PacketQueue.h"
-#include "PictureQueue.h"
-#include "DecodeThreadHandler.h"
+#include "packet_queue.h"
+#include "picture_queue.h"
+#include "decode_thread_handler.h"
 #include <thread>
 #include <functional>
 #include <SDL2/SDL.h>

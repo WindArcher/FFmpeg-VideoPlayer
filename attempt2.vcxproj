@@ -19,24 +19,24 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Audio.h" />
-    <ClInclude Include="src\DecodeThreadHandler.h" />
-    <ClInclude Include="src\FFmpegException.h" />
-    <ClInclude Include="src\PacketQueue.h" />
-    <ClInclude Include="src\PictureQueue.h" />
-    <ClInclude Include="src\Player.h" />
-    <ClInclude Include="src\SDLException.h" />
-    <ClInclude Include="src\SDLWrapper.h" />
-    <ClInclude Include="src\Video.h" />
+    <ClInclude Include="src\audio.h" />
+    <ClInclude Include="src\decode_thread_handler.h" />
+    <ClInclude Include="src\ffmpeg_exception.h" />
+    <ClInclude Include="src\packet_queue.h" />
+    <ClInclude Include="src\picture_queue.h" />
+    <ClInclude Include="src\player.h" />
+    <ClInclude Include="src\sdl_exception.h" />
+    <ClInclude Include="src\sdl_wrapper.h" />
+    <ClInclude Include="src\video.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Audio.cpp" />
+    <ClCompile Include="src\audio.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\PacketQueue.cpp" />
-    <ClCompile Include="src\PictureQueue.cpp" />
-    <ClCompile Include="src\Player.cpp" />
-    <ClCompile Include="src\SDLWrapper.cpp" />
-    <ClCompile Include="src\Video.cpp" />
+    <ClCompile Include="src\packet_queue.cpp" />
+    <ClCompile Include="src\picture_queue.cpp" />
+    <ClCompile Include="src\player.cpp" />
+    <ClCompile Include="src\sdl_wrapper.cpp" />
+    <ClCompile Include="src\video.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

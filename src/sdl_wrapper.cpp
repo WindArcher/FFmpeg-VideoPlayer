@@ -1,5 +1,5 @@
-#include "SDLWrapper.h"
-#include "SDLException.h"
+#include "sdl_wrapper.h"
+#include "sdl_exception.h"
 
 bool SDLWrapper::m_init = false;
 void SDLWrapper::initSdl()

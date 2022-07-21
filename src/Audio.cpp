@@ -1,8 +1,8 @@
-#include "Audio.h"
+#include "audio.h"
 #include <functional>
 #include <assert.h>
-#include "SDLException.h"
-#include "SDLWrapper.h"
+#include "sdl_exception.h"
+#include "sdl_wrapper.h"
 Audio::Audio( DecodeThreadHandler* handler, AVCodecContext* codecContext, AVFormatContext* formatCtx, int steamNum ) : m_decodeHandler( handler )
 {
     if( !SDLWrapper::init() )

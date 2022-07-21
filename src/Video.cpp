@@ -1,5 +1,5 @@
-#include "Video.h"
-#include "SDLWrapper.h"
+#include "video.h"
+#include "sdl_wrapper.h"
 #include <iostream>
 #define AV_SYNC_THRESHOLD 0.01
 #define AV_NOSYNC_THRESHOLD 1.0

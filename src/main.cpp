@@ -1,7 +1,7 @@
 #include "Player.h"
 #include <iostream>
-#include "SDLException.h"
-#include "FFmpegException.h"
+#include "sdl_exception.h"
+#include "ffmpeg_exception.h"
 int main( int argc, char* argv[] )
 {
     if( argc < 2 )

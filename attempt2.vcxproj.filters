@@ -14,54 +14,54 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Audio.h">
+    <ClInclude Include="src\audio.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\PacketQueue.h">
+    <ClInclude Include="src\packet_queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\PictureQueue.h">
+    <ClInclude Include="src\picture_queue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Player.h">
+    <ClInclude Include="src\player.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\SDLWrapper.h">
+    <ClInclude Include="src\sdl_wrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Video.h">
+    <ClInclude Include="src\video.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\FFmpegException.h">
+    <ClInclude Include="src\ffmpeg_exception.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\SDLException.h">
+    <ClInclude Include="src\sdl_exception.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\DecodeThreadHandler.h">
+    <ClInclude Include="src\decode_thread_handler.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Audio.cpp">
+    <ClCompile Include="src\audio.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\PacketQueue.cpp">
+    <ClCompile Include="src\packet_queue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\PictureQueue.cpp">
+    <ClCompile Include="src\picture_queue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Player.cpp">
+    <ClCompile Include="src\player.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\SDLWrapper.cpp">
+    <ClCompile Include="src\sdl_wrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Video.cpp">
+    <ClCompile Include="src\video.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

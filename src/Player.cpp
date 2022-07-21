@@ -1,6 +1,6 @@
 #include "Player.h"
-#include "FFmpegException.h"
-#include "SDLException.h"
+#include "ffmpeg_exception.h"
+#include "sdl_exception.h"
 Player::Player()
 {
 	if( !SDLWrapper::init() )

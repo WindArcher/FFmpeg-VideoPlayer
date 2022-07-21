@@ -16,8 +16,8 @@ extern "C"
 #include <limits>
 #include <functional>
 
-#include "PacketQueue.h"
-#include "DecodeThreadHandler.h"
+#include "packet_queue.h"
+#include "decode_thread_handler.h"
 #define SDL_AUDIO_BUFFER_SIZE 1024
 #define MAX_AUDIO_FRAME_SIZE 192000
 void AudioCallback( void* userdata, Uint8* stream, int len );

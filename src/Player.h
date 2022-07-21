@@ -14,10 +14,10 @@ extern "C"
 #include <thread>
 #include <mutex>
 #include <memory>
-#include "Audio.h"
-#include "Video.h"
-#include "DecodeThreadHandler.h"
-#include "SDLWrapper.h"
+#include "audio.h"
+#include "video.h"
+#include "decode_thread_handler.h"
+#include "sdl_wrapper.h"
 
 #define FF_REFRESH_EVENT (SDL_USEREVENT)
 struct SDLDisplay
