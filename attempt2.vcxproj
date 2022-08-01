@@ -57,6 +57,10 @@
     <ClInclude Include="src\Window\Video Bar\video_bar.h" />
     <ClInclude Include="src\Window\window.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="extra\buttons_vector.png" />
+    <Image Include="extra\circle.png" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>

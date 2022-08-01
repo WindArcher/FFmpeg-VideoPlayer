@@ -1,6 +1,8 @@
 #include "button_bar.h"
 
 #include <SDL2/SDL_image.h> 
+#include <Windows.h>
+#include <string>
 
 #include "Buttons/play_pause_button.h"
 #include "Buttons/stop_button.h"
@@ -9,10 +11,19 @@
 
 namespace Window
 {
+    static std::string GetCurrentDirectory()
+    {
+        char buffer[MAX_PATH];
+        GetModuleFileNameA( NULL, buffer, MAX_PATH );
+        std::string::size_type pos = std::string( buffer ).find_last_of( "\\/" );
+
+        return std::string( buffer ).substr( 0, pos );
+    }
+
     ButtonBar::ButtonBar( SDL_Renderer* renderer, SDL_Rect& rect ) : m_buttonBarRect( rect )
     {
         m_renderer = renderer;
-        m_buttonsTexture = IMG_LoadTexture( m_renderer, m_filename );
+        m_buttonsTexture = IMG_LoadTexture( m_renderer, std::string( GetCurrentDirectory() + m_filename ).c_str() );
         int w, h;
         SDL_QueryTexture( m_buttonsTexture, NULL, NULL, &w, &h );
         int buttonWidth = 0.7 * m_buttonBarRect.h;

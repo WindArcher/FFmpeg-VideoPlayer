@@ -2,17 +2,31 @@
 
 #include <SDL2/SDL_image.h>
 
+#include <Windows.h>
+
 #include "Window/Events/events.h"
 
 namespace Window
 {
+
+    static std::string GetCurrentDirectory()
+    {
+        char buffer[MAX_PATH];
+        GetModuleFileNameA( NULL, buffer, MAX_PATH );
+        std::string::size_type pos = std::string( buffer ).find_last_of( "\\/" );
+
+        return std::string( buffer ).substr( 0, pos );
+    }
+
     RewindBar::RewindBar( SDL_Renderer* renderer, SDL_Rect& rect ) : m_drawRect( rect )
     {
         m_renderer = renderer;
         startPoint.x = m_drawRect.x + (m_drawRect.w / 10);
         startPoint.y = m_drawRect.h / 2;
         m_maxLineLenght = (m_drawRect.w * 8) / 10;
-        m_texture = IMG_LoadTexture( m_renderer, "C:\\Users\\Archer\\source\\repos\\attempt2\\circle.png" );
+        WCHAR path[MAX_PATH];
+        GetModuleFileNameW( NULL, path, MAX_PATH );
+        m_texture = IMG_LoadTexture( m_renderer, std::string ( GetCurrentDirectory() + "\\circle.png" ).c_str() );
     }
 
     RewindBar::~RewindBar()

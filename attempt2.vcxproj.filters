@@ -40,6 +40,9 @@
     <Filter Include="src\Window\Events">
       <UniqueIdentifier>{d2638947-e4f5-4de4-98dc-2d981ab426a1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resourses">
+      <UniqueIdentifier>{4c6ef75b-5e67-4fbf-8b61-f6899e9c6ed8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\file_reader.cpp">
@@ -149,5 +152,13 @@
     <ClInclude Include="src\Window\Events\events.h">
       <Filter>src\Window\Events</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="extra\buttons_vector.png">
+      <Filter>Resourses</Filter>
+    </Image>
+    <Image Include="extra\circle.png">
+      <Filter>Resourses</Filter>
+    </Image>
   </ItemGroup>
 </Project>

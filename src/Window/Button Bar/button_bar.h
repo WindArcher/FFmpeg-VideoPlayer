@@ -18,7 +18,7 @@ namespace Window
         void clicked();
         void setPauseMode( bool mode );
     private:
-        static constexpr auto m_filename = "C:\\Users\\Archer\\source\\repos\\SDLinterfacetest\\buttons_vector.png";
+        static constexpr auto m_filename = "\\buttons_vector.png";
         SDL_Renderer* m_renderer;
         SDL_Rect& m_buttonBarRect;
         SDL_Texture* m_buttonsTexture;
