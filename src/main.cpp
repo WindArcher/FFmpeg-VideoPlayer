@@ -1,20 +1,43 @@
-#include "Player.h"
 #include <iostream>
-#include "sdl_exception.h"
-#include "ffmpeg_exception.h"
-int main( int argc, char* argv[] )
+
+#include "Window/window.h"
+#include "Exceptions/sdl_exception.h"
+#include "Exceptions/ffmpeg_exception.h"
+
+#include <windows.h>
+
+int main()
 {
-    if( argc < 2 )
-    {
-        std::cout << "Enter video file path as an argument.\n";
-        return -1;
-    }
     try
     {
-        Player player;
-        player.run( argv[1] );
+        
+        OPENFILENAME ofn;       // common dialog box structure
+        TCHAR szFile[260] = { 0 };       // if using TCHAR macros
+        ZeroMemory( &ofn, sizeof( ofn ) );
+        ofn.lStructSize = sizeof( ofn );
+        ofn.hwndOwner = NULL;
+        ofn.lpstrFile = szFile;
+        ofn.nMaxFile = sizeof( szFile );
+        ofn.lpstrFilter = LPCWSTR( "All\0*.*\0Text\0*.TXT\0" );
+        ofn.nFilterIndex = 1;
+        ofn.lpstrFileTitle = NULL;
+        ofn.nMaxFileTitle = 0;
+        ofn.lpstrInitialDir = NULL;
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+
+        if( GetOpenFileName( &ofn ) == TRUE )
+        {
+            Window::Window inter;
+            char buffer[500];
+            wcstombs( buffer, ofn.lpstrFile, sizeof( buffer ) );
+            std::wstring ws( ofn.lpstrFile );
+            std::string myVarS = std::string( ws.begin(), ws.end() );
+            inter.openVideo( buffer );
+            inter.SDLLoop();
+        }
+        
     }
-    catch( SDLException& e )
+    catch( std::exception& e )
     {
         std::cerr << e.what();
     }
@@ -22,7 +45,7 @@ int main( int argc, char* argv[] )
     {
         std::cerr << e.what();
     }
-    catch( std::exception& e )
+    catch( SDLException& e )
     {
         std::cerr << e.what();
     }
