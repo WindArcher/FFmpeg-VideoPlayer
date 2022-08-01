@@ -1,0 +1,153 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{ab1f318d-ac4c-4d3c-9e6f-593ff3eb6d8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Window">
+      <UniqueIdentifier>{1f055fcc-98ed-480f-93c6-83a60a04886c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Exceptions">
+      <UniqueIdentifier>{c023c658-0d88-45de-acb9-c6025b32cec4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Interfaces">
+      <UniqueIdentifier>{fb420e7b-a00d-47ee-9dbc-030c944d52fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Video">
+      <UniqueIdentifier>{d95f27a7-f5db-406f-ac34-70a32c9bba8a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Audio">
+      <UniqueIdentifier>{50d67d15-d7a4-4cab-9b6e-70ef981b7b48}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Window\Button Bar">
+      <UniqueIdentifier>{2079b31d-653e-41fb-849f-5e14405c3620}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Window\Rewind Bar">
+      <UniqueIdentifier>{1b7aefe6-c309-4df7-9b3d-760bbf6598b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Window\Video Bar">
+      <UniqueIdentifier>{184a855c-a138-479f-8abf-13e561b949de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Window\Volume Bar">
+      <UniqueIdentifier>{a9e5d7ef-1880-4999-869d-97fb152ac83a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Queues">
+      <UniqueIdentifier>{36b25143-daa5-47e2-b0c2-3f64d0819c7d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Window\Button Bar\Buttons">
+      <UniqueIdentifier>{19c32ef3-3f10-4f68-81f8-1aa77d4e1ae1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\Window\Events">
+      <UniqueIdentifier>{d2638947-e4f5-4de4-98dc-2d981ab426a1}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\file_reader.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\main.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Queues\packet_queue.cpp">
+      <Filter>src\Queues</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Queues\picture_queue.cpp">
+      <Filter>src\Queues</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Video\video.cpp">
+      <Filter>src\Video</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Audio\audio.cpp">
+      <Filter>src\Audio</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\window.cpp">
+      <Filter>src\Window</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Button Bar\button_bar.cpp">
+      <Filter>src\Window\Button Bar</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Button Bar\SDL_Button.cpp">
+      <Filter>src\Window\Button Bar</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Button Bar\Buttons\play_pause_button.cpp">
+      <Filter>src\Window\Button Bar\Buttons</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Button Bar\Buttons\rewind_back_button.cpp">
+      <Filter>src\Window\Button Bar\Buttons</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Button Bar\Buttons\rewind_forward_button.cpp">
+      <Filter>src\Window\Button Bar\Buttons</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Button Bar\Buttons\stop_button.cpp">
+      <Filter>src\Window\Button Bar\Buttons</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Video Bar\video_bar.cpp">
+      <Filter>src\Window\Video Bar</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Rewind Bar\rewind_bar.cpp">
+      <Filter>src\Window\Rewind Bar</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Window\Events\events.cpp">
+      <Filter>src\Window\Events</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\file_reader.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Exceptions\ffmpeg_exception.h">
+      <Filter>src\Exceptions</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Exceptions\sdl_exception.h">
+      <Filter>src\Exceptions</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interfaces\decode_thread_handler.h">
+      <Filter>src\Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Interfaces\player.h">
+      <Filter>src\Interfaces</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Queues\packet_queue.h">
+      <Filter>src\Queues</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Queues\picture_queue.h">
+      <Filter>src\Queues</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Video\video.h">
+      <Filter>src\Video</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Audio\audio.h">
+      <Filter>src\Audio</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\window.h">
+      <Filter>src\Window</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Button Bar\button_bar.h">
+      <Filter>src\Window\Button Bar</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Button Bar\SDL_Button.h">
+      <Filter>src\Window\Button Bar</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Button Bar\Buttons\play_pause_button.h">
+      <Filter>src\Window\Button Bar\Buttons</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Button Bar\Buttons\rewind_back_button.h">
+      <Filter>src\Window\Button Bar\Buttons</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Button Bar\Buttons\rewind_forward_button.h">
+      <Filter>src\Window\Button Bar\Buttons</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Button Bar\Buttons\stop_button.h">
+      <Filter>src\Window\Button Bar\Buttons</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Video Bar\video_bar.h">
+      <Filter>src\Window\Video Bar</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Rewind Bar\rewind_bar.h">
+      <Filter>src\Window\Rewind Bar</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Window\Events\events.h">
+      <Filter>src\Window\Events</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
