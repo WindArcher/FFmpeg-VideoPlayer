@@ -125,9 +125,10 @@ namespace Player
                 double pts = 0;
                 while( !m_quitFlag )
                 {
-                    if( m_pictQ.size() >= 180 )
+                    if( m_pictQ.size() >= 10 )
                     {
-                        break;
+                        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
+                        continue;
                     }
                     if( m_videoQueue.size() <= MIN_VIDEOQ_SIZE )
                         m_decodeHandler->startDecoding();

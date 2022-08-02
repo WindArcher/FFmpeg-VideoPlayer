@@ -15,16 +15,6 @@ void PictureQueue::putFrame( AVFrame* frame, SwsContext* swsCtx, int width, int 
             height,
             32
         );
-        uint8_t* buffer = (uint8_t*)av_malloc( numBytes * sizeof( uint8_t ) );
-        av_image_fill_arrays(
-            m_pictQueue.back().frame.get()->data,
-            m_pictQueue.back().frame.get()->linesize,
-            buffer,
-            AV_PIX_FMT_YUV420P,
-            width,
-            height,
-            32
-        );
         sws_scale( swsCtx,
             (uint8_t const* const*)frame->data,
             frame->linesize,
@@ -33,7 +23,6 @@ void PictureQueue::putFrame( AVFrame* frame, SwsContext* swsCtx, int width, int 
             m_pictQueue.back().frame.get()->data,
             m_pictQueue.back().frame.get()->linesize
         );
-        //m_pictQueue.back().pts = pts;
         m_totalSize += frame->pkt_size;
     }
     m_cond.notify_one();

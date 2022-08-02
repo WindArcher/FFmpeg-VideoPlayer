@@ -112,6 +112,8 @@ namespace Player
 		if( currentPos < m_formatCtx->duration && currentPos >= 0 )
 		{
 			stop();
+			avcodec_flush_buffers( m_videoCodec->codecCtx );
+			avcodec_flush_buffers( m_audioCodec->codecCtx );
 			videoPos = av_rescale_q( currentPos, timeBaseQ, m_formatCtx->streams[m_videoStreamNum]->time_base );
 			audioPos = av_rescale_q( currentPos, timeBaseQ, m_formatCtx->streams[m_audioStreamNum]->time_base );
 			int ret;
@@ -129,6 +131,8 @@ namespace Player
 		int64_t videoPos, audioPos;
 		AVRational timeBaseQ{ 1, AV_TIME_BASE };
 		int64_t time = (m_formatCtx->duration * progress) / 100;
+		avcodec_flush_buffers( m_videoCodec->codecCtx );
+		avcodec_flush_buffers( m_audioCodec->codecCtx );
 		videoPos = av_rescale_q( time, timeBaseQ, m_formatCtx->streams[m_videoStreamNum]->time_base );
 		audioPos = av_rescale_q( time, timeBaseQ, m_formatCtx->streams[m_audioStreamNum]->time_base );
 		int ret;
