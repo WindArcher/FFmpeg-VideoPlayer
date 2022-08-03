@@ -21,9 +21,9 @@ namespace Window
 		m_buttonBarRect = { 0, (m_height * 9) / 10, m_width, (m_height) / 10 };
 		m_buttonBar = std::make_unique<ButtonBar>( m_renderer, m_buttonBarRect );
 		m_rewindRect = { 0, (m_height * 85) / 100, m_width, (m_height)* 5 / 100 };
-		m_rewindBar = std::make_unique<RewindBar>( m_renderer, m_rewindRect );
+		m_rewindBar = std::make_unique<RewindBar>( m_renderer, m_rewindRect, &m_fileReader );
 		m_videoBarRect = { 0,0,m_width,(m_height) * 85 / 100 };
-		m_videoBar = std::make_unique<VideoBar>( m_renderer, m_videoBarRect );
+		m_videoBar = std::make_unique<VideoBar>( m_renderer, m_videoBarRect, &m_fileReader );
 		Player::Events::registerEvents();
 	}
 
@@ -48,10 +48,11 @@ namespace Window
 		{
 			int w, h;
 			m_fileReader.getVideoSize( w, h );
-			resizeWindow( w/2, (h / 2) * 1.17 ); // 
+			resizeWindow( w/2, (h / 2) * 1.17 ); 
 			m_videoBar->setTextureSize( w, h );
 			m_fileReader.play();
 			m_videoBar->sheduleRefresh( 39 );
+			m_rewindBar->enableTimer();
 		}
 	}
 
@@ -103,10 +104,8 @@ namespace Window
 			}
 			case static_cast<Uint32>(Player::Events::Events::REWIND_FORWARD_BUTTON_PUSHED ):
 			{
-				m_pause = true;
 				m_videoBar->killRefreshTimer();
 				m_fileReader.rewindRelative( 60 );
-				m_pause = false;
 				m_videoBar->sheduleRefresh( 39 );
 				break;
 			}
@@ -117,24 +116,6 @@ namespace Window
 				m_fileReader.rewindRelative( -60 );
 				m_pause = false;
 				m_videoBar->sheduleRefresh( 39 );
-				break;
-			}
-			case static_cast<Uint32>(Player::Events::Events::REFRESH_VIDEO):
-			{
-				if( m_fileReader.isFinished() )
-				{
-					m_videoBar->killRefreshTimer();
-					m_pause = true;
-					m_fileReader.stop();
-				}
-				if( !m_pause )
-				{
-					int delay;
-					if( m_fileReader.updateTextureAndGetDelay( m_videoBar->getTexture(), delay ) )
-						m_videoBar->updateVideoBar();
-					m_rewindBar->updateProgres( m_fileReader.getFileReadingProgress() );
-					m_videoBar->sheduleRefresh( delay );
-				}
 				break;
 			}
 			case static_cast<Uint32>(Player::Events::Events::REWIND_BAR_POINT_CHANGED):
@@ -165,9 +146,9 @@ namespace Window
 		m_buttonBarRect = { 0, (m_height * 9) / 10, m_width, (m_height) / 10 };
 		m_buttonBar = std::make_unique<ButtonBar>( m_renderer, m_buttonBarRect );
 		m_rewindRect = { 0, (m_height * 85) / 100, m_width, (m_height) * 5 / 100 };
-		m_rewindBar = std::make_unique<RewindBar>( m_renderer, m_rewindRect );
+		m_rewindBar = std::make_unique<RewindBar>( m_renderer, m_rewindRect, &m_fileReader );
 		m_videoBarRect = { 0,0,m_width,(m_height) * 85 / 100 };
-		m_videoBar = std::make_unique<VideoBar>( m_renderer, m_videoBarRect );
+		m_videoBar = std::make_unique<VideoBar>( m_renderer, m_videoBarRect, &m_fileReader );
 	}
 
 	void Window::resizeWindow( int w, int h )

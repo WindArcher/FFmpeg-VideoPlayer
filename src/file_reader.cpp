@@ -334,13 +334,11 @@ namespace Player
 				delay = 1;
 				return false;
 			}
-			delay = ( (int)(realDelay * 1000 + 0.5) );
-			printf( "Next Scheduled Refresh:\t%f\n\n", (double)(realDelay * 1000 + 0.5) );
+			delay = static_cast<int>( realDelay );
+			printf( "Next Scheduled Refresh:\t%f\n\n", realDelay );
 			updateTextureFromFrame( texture, pict.frame.get() );
 			if( m_video->m_pictQ.size() <= 10 )
 				m_video->notifyVideoThread();
-			if( m_audio->m_audioQueue.size() <= MIN_AUDIOQ_SIZE || m_video->m_videoQueue.size() <= MIN_VIDEOQ_SIZE )
-				notifyDecoding();
 			return true;
 		}
 	}

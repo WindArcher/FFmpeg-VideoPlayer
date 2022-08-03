@@ -89,9 +89,7 @@ namespace Player
             printf( "Audio Video Delay:\t\t%f\n\n", audio_video_delay );
             double sync_threshold = (ptsDelay > AV_SYNC_THRESHOLD) ? ptsDelay : AV_SYNC_THRESHOLD;
             printf( "Sync Threshold:\t\t\t%f\n", sync_threshold );
-            
-            //if( audio_video_delay < -2 * sync_threshold )
-                //return -1;
+
             if( fabs( audio_video_delay ) < AV_NOSYNC_THRESHOLD )
             {
                 if( audio_video_delay <= -sync_threshold )
@@ -109,9 +107,10 @@ namespace Player
             m_frameDelay += ptsDelay;
 
             printf( "Frame delay:\t%f\n", m_frameDelay );
-            static double lastTime = (av_gettime() / 1000000.0);
             double clock = (av_gettime() / 1000000.0);
             printf( "Current time:\t%f\n", clock );
+            
+            static double lastTime = (av_gettime() / 1000000.0);
             printf( "Time diff:\t%f\n", clock - lastTime );
             lastTime = clock;
             printf( "Delay:\t%f\n", (m_frameDelay - clock) );
@@ -122,11 +121,11 @@ namespace Player
 
             if( realDelay < 0.01 )
             {
-                realDelay = 0.010;
+                realDelay = 0.01;
             }
 
             printf( "Corrected Real Delay:\t%f\n", realDelay );
-            return  realDelay;
+            return  realDelay * 1000;
         }
 
         void Video::videoThread()

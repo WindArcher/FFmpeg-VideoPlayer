@@ -1,12 +1,14 @@
 #include "video_bar.h"
 #include "Exceptions/sdl_exception.h"
+#include "file_reader.h"
 
 namespace Window
 {
-    VideoBar::VideoBar( SDL_Renderer* renderer, SDL_Rect& rect ) : m_drawRect( rect )
+    VideoBar::VideoBar( SDL_Renderer* renderer, SDL_Rect& rect, Player::FileReader* reader ) : m_drawRect( rect )
     {
         m_drawRect = rect;
         m_renderer = renderer;
+        m_fileReader = reader;
     }
 
     VideoBar::~VideoBar()
@@ -38,7 +40,6 @@ namespace Window
 
     void VideoBar::sheduleRefresh( int delay )
     {
-        printf( "\n\n\n--------\nDelay: %d\n------------\n\n", delay );
         m_refreshTimer = SDL_AddTimer( delay, refresh, this );
         if( !m_refreshTimer )
             throw SDLException( "Could not schedule refresh callback" );
@@ -60,11 +61,20 @@ namespace Window
         return m_texture;
     }
 
-    Uint32 VideoBar::refresh( Uint32 interval, void* fileReader )
+    Uint32 refresh( Uint32 interval, void* bar )
     {
-        SDL_Event event;
-        event.type = static_cast<Uint32>( Player::Events::Events::REFRESH_VIDEO );
-        SDL_PushEvent( &event );
-        return 0;
+        VideoBar* videoBar = reinterpret_cast<Window::VideoBar*>(bar);
+        int delay = 1;
+        if( videoBar->m_fileReader->isFinished() )
+        {
+            videoBar->killRefreshTimer();
+            videoBar->m_fileReader->stop();
+        }
+        else
+        {
+            if( videoBar->m_fileReader->updateTextureAndGetDelay( videoBar->m_texture , delay ) )
+                videoBar->updateVideoBar();
+        }
+        return delay;
     }
 }

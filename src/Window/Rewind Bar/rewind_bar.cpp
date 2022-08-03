@@ -18,9 +18,10 @@ namespace Window
         return std::string( buffer ).substr( 0, pos );
     }
 
-    RewindBar::RewindBar( SDL_Renderer* renderer, SDL_Rect& rect ) : m_drawRect( rect )
+    RewindBar::RewindBar( SDL_Renderer* renderer, SDL_Rect& rect, Player::FileReader* reader ) : m_drawRect( rect )
     {
         m_renderer = renderer;
+        m_fileReader = reader;
         startPoint.x = m_drawRect.x + (m_drawRect.w / 10);
         startPoint.y = m_drawRect.h / 2;
         m_maxLineLenght = (m_drawRect.w * 8) / 10;
@@ -32,6 +33,16 @@ namespace Window
     RewindBar::~RewindBar()
     {
         SDL_DestroyTexture( m_texture );
+    }
+
+    void RewindBar::enableTimer()
+    {
+        m_timer = SDL_AddTimer( 100, updateBar, this );
+    }
+
+    void RewindBar::disableTimer()
+    {
+        SDL_RemoveTimer( m_timer );
     }
 
     void RewindBar::draw()
@@ -75,5 +86,12 @@ namespace Window
             m_progress = progress;
             draw();
         }
+    }
+
+    Uint32 RewindBar::updateBar( Uint32 delay, void* rewindBar )
+    {
+        RewindBar* rewind = reinterpret_cast<RewindBar*>(rewindBar);
+        rewind->updateProgres( rewind->m_fileReader->getFileReadingProgress() );
+        return delay;
     }
 };
