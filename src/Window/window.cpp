@@ -172,9 +172,9 @@ namespace Window
 
 	void Window::resizeWindow( int w, int h )
 	{
-		SDL_SetWindowSize( m_window, w, h );
 		m_width = w;
 		m_height = h;
+		SDL_SetWindowSize( m_window, m_width, m_height );
 		display();
 	}
 }

@@ -16,11 +16,14 @@ extern "C"
 #include <string>
 #include <thread>
 #include <memory>
+#include <mutex>
+#include <condition_variable>
 
 #include "Interfaces/player.h"
 #include "Interfaces/decode_thread_handler.h"
 #include "Video/video.h"
 #include "Audio/audio.h"
+
 namespace Player
 {
     namespace CodecData
@@ -48,6 +51,9 @@ namespace Player
         void rewindProgress( int progress ) override;
         bool startDecoding() override;
         bool stopDecoding() override;
+        bool pauseDecoding() override;
+        bool resumeDecoding() override;
+        bool notifyDecoding() override;
         void resetFile();
         bool isFinished();
         int getFileReadingProgress();
@@ -55,14 +61,15 @@ namespace Player
         bool updateTextureAndGetDelay( SDL_Texture* texture, int& delay );
     private:
         AVFormatContext* m_formatCtx;
-        std::mutex m_mutex;
+        std::mutex m_textureMutex, m_threadMutex;
         AVFrame* m_tempFrame;
         int m_videoStreamNum = -1, m_audioStreamNum = -1;
         std::unique_ptr<CodecData::CodecData> m_videoCodec, m_audioCodec;
         std::unique_ptr<Audio::Audio> m_audio;
         std::unique_ptr<Video::Video> m_video;
         std::thread m_decodeThread;
-        bool m_finish = false, m_threadInit = false, m_decodeFinished = false, m_quitFlag = false;
+        std::condition_variable m_cond;
+        bool m_finish = false, m_decodePause = false, m_decodeActive = false, m_quitFlag = false;
         void clearQueues();
         void findStreamNumbers();
         void decodeThread();

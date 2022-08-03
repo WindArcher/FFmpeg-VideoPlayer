@@ -60,7 +60,7 @@ namespace Window
         return m_texture;
     }
 
-    Uint32 VideoBar::refresh( Uint32 interval, void* )
+    Uint32 VideoBar::refresh( Uint32 interval, void* fileReader )
     {
         SDL_Event event;
         event.type = static_cast<Uint32>( Player::Events::Events::REFRESH_VIDEO );

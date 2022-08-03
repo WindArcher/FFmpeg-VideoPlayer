@@ -23,29 +23,46 @@ namespace Player
                 NULL );
         }
 
-        void Video::quit()
-        {
-            m_quitFlag = true;
-            if( m_videoFrameThread.joinable() )
-                m_videoFrameThread.join();
-        }
-
         void Video::startVideoThread()
         {
-            if( m_init && !m_videoThreadFinished )
-                return;
-            if( m_videoFrameThread.joinable() )
-                m_videoFrameThread.join();
-            m_init = true;
-            m_quitFlag = false;
-            m_videoFrameThread = std::thread( &Video::videoThread, this );
+            if( !m_videoThreadActive )
+            {
+                if( m_videoFrameThread.joinable() )
+                    m_videoFrameThread.join();
+                m_quitFlag = false;
+                m_videoThreadActive = true;
+                m_videoFrameThread = std::thread( &Video::videoThread, this );
+            }
+            else
+                resumeVideoThread();
         }
 
         void Video::stopVideoThread()
         {
-            m_quitFlag = true;
-            if( m_videoFrameThread.joinable() )
-                m_videoFrameThread.join();
+            if( m_videoThreadActive )
+            {
+                m_quitFlag = true;
+                m_cond.notify_one();
+                if( m_videoFrameThread.joinable() )
+                    m_videoFrameThread.join();
+            }
+        }
+
+        void Video::pauseVideoThread()
+        {
+            std::unique_lock<std::mutex> lock( m_mutex );
+            m_videoThreadPause = true;
+        }
+
+        void Video::resumeVideoThread()
+        {
+            m_videoThreadPause = false;
+            m_cond.notify_one();
+        }
+
+        void Video::notifyVideoThread()
+        {
+            m_cond.notify_one();
         }
 
         void Video::resetFrameDelay()
@@ -72,6 +89,7 @@ namespace Player
             printf( "Audio Video Delay:\t\t%f\n\n", audio_video_delay );
             double sync_threshold = (ptsDelay > AV_SYNC_THRESHOLD) ? ptsDelay : AV_SYNC_THRESHOLD;
             printf( "Sync Threshold:\t\t\t%f\n", sync_threshold );
+            
             //if( audio_video_delay < -2 * sync_threshold )
                 //return -1;
             if( fabs( audio_video_delay ) < AV_NOSYNC_THRESHOLD )
@@ -91,28 +109,28 @@ namespace Player
             m_frameDelay += ptsDelay;
 
             printf( "Frame delay:\t%f\n", m_frameDelay );
-
+            static double lastTime = (av_gettime() / 1000000.0);
             double clock = (av_gettime() / 1000000.0);
-
             printf( "Current time:\t%f\n", clock );
-
+            printf( "Time diff:\t%f\n", clock - lastTime );
+            lastTime = clock;
             printf( "Delay:\t%f\n", (m_frameDelay - clock) );
 
             double realDelay = m_frameDelay - clock;
 
             printf( "Real Delay:\t\t\t\t%f\n", realDelay );
 
-            if( realDelay < 0.005 )
+            if( realDelay < 0.01 )
             {
-                realDelay = 0.005;
+                realDelay = 0.010;
             }
+
             printf( "Corrected Real Delay:\t%f\n", realDelay );
-            return realDelay;
+            return  realDelay;
         }
 
         void Video::videoThread()
         {
-            m_videoThreadFinished = false;
             AVPacket* pkt = av_packet_alloc();
             m_frame = av_frame_alloc();
             try
@@ -125,13 +143,10 @@ namespace Player
                 double pts = 0;
                 while( !m_quitFlag )
                 {
-                    if( m_pictQ.size() >= 10 )
-                    {
-                        std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
-                        continue;
-                    }
-                    if( m_videoQueue.size() <= MIN_VIDEOQ_SIZE )
-                        m_decodeHandler->startDecoding();
+                    std::unique_lock<std::mutex> lock( m_mutex );
+                    m_cond.wait( lock, [&] { return m_pictQ.size() <= 20 || m_videoThreadPause || m_quitFlag; } );
+                    if( m_quitFlag )
+                        break;
                     pts = 0;
                     pkt = m_videoQueue.get( true, &m_quitFlag );
                     if( pkt == nullptr )
@@ -172,7 +187,7 @@ namespace Player
                 }
                 av_frame_free( &m_frame );
                 av_free( m_frame );
-                m_videoThreadFinished = true;
+                m_videoThreadActive = false;
                 printf( "VideoThread Ended" );
             }
             catch( std::exception& e )

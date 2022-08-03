@@ -111,23 +111,33 @@ namespace Player
 		currentPos += time * AV_TIME_BASE;
 		if( currentPos < m_formatCtx->duration && currentPos >= 0 )
 		{
-			stop();
-			avcodec_flush_buffers( m_videoCodec->codecCtx );
-			avcodec_flush_buffers( m_audioCodec->codecCtx );
+			m_audio->stop();
+			pauseDecoding();
+			m_video->pauseVideoThread();
+			m_finish = false;
+			clearQueues();
 			videoPos = av_rescale_q( currentPos, timeBaseQ, m_formatCtx->streams[m_videoStreamNum]->time_base );
 			audioPos = av_rescale_q( currentPos, timeBaseQ, m_formatCtx->streams[m_audioStreamNum]->time_base );
 			int ret;
-			if( m_formatCtx->streams[m_audioStreamNum] && (ret = av_seek_frame( m_formatCtx, m_audioStreamNum, audioPos, seekFlag )) > 0 )
+			if( m_formatCtx->streams[m_audioStreamNum] && ( ret = av_seek_frame( m_formatCtx, m_audioStreamNum, audioPos, seekFlag ) ) < 0 )
 				throw FFmpegException( "Seek exception\n", ret );
-			if( m_formatCtx->streams[m_videoStreamNum] && (ret = av_seek_frame( m_formatCtx, m_videoStreamNum, videoPos, seekFlag )) > 0 )
+			if( m_formatCtx->streams[m_videoStreamNum] && ( ret = av_seek_frame( m_formatCtx, m_videoStreamNum, videoPos, seekFlag ) ) < 0 )
 				throw FFmpegException( "Seek exception\n", ret );
-			play();
+			avcodec_flush_buffers( m_videoCodec->codecCtx );
+			avcodec_flush_buffers( m_audioCodec->codecCtx );
+			m_audio->start();
+			resumeDecoding();
+			m_video->resumeVideoThread();
 		}
 	}
 
 	void FileReader::rewindProgress( int progress )
 	{
-		stop();
+		m_audio->stop();
+		pauseDecoding();
+		m_video->pauseVideoThread();
+		m_finish = false;
+		clearQueues();
 		int64_t videoPos, audioPos;
 		AVRational timeBaseQ{ 1, AV_TIME_BASE };
 		int64_t time = (m_formatCtx->duration * progress) / 100;
@@ -140,28 +150,51 @@ namespace Player
 			throw FFmpegException( "Seek exception\n", ret );
 		if( m_formatCtx->streams[m_videoStreamNum] && (ret = av_seek_frame( m_formatCtx, m_videoStreamNum, videoPos, NULL )) > 0 )
 			throw FFmpegException( "Seek exception\n", ret );
-		play();
+		m_audio->start();
+		resumeDecoding();
+		m_video->resumeVideoThread();
 	}
 
 	bool Player::FileReader::startDecoding()
 	{
-		if( m_threadInit && m_finish )
-			return false;
-		if( !m_decodeFinished && m_threadInit )
-			return false;
-		if( m_decodeThread.joinable() )
-			m_decodeThread.join();
-		m_threadInit = true;
-		m_quitFlag = false;
-		m_decodeThread = std::thread( &FileReader::decodeThread, this );
+		if( !m_decodeActive )
+		{
+			if( m_decodeThread.joinable() )
+				m_decodeThread.join();
+			m_decodeActive = true;
+			m_quitFlag = false;
+			m_decodeThread = std::thread( &FileReader::decodeThread, this );
+		}
+		else
+			resumeDecoding();
 		return true;
 	}
 
 	bool FileReader::stopDecoding()
 	{
 		m_quitFlag = true;
+		m_cond.notify_one();
 		if( m_decodeThread.joinable() )
 			m_decodeThread.join();
+		return true;
+	}
+
+	bool FileReader::pauseDecoding()
+	{
+		m_decodePause = true;
+		return true;
+	}
+
+	bool FileReader::resumeDecoding()
+	{
+		m_decodePause = false;
+		m_cond.notify_one();
+		return true;
+	}
+
+	bool FileReader::notifyDecoding()
+	{
+		m_cond.notify_one();
 		return true;
 	}
 
@@ -174,12 +207,15 @@ namespace Player
 
 	void FileReader::decodeThread()
 	{
-		m_decodeFinished = false;
 		AVPacket* packet = av_packet_alloc();
 		if( packet == NULL )
 			throw std::exception( "Could not alloc packet.\n" );
-		while( !m_quitFlag || (m_audio->m_audioQueue.size() >= MAX_AUDIOQ_SIZE && m_video->m_videoQueue.size() >= MAX_VIDEOQ_SIZE) )
+		while( !m_quitFlag )
 		{
+			std::unique_lock<std::mutex> lock( m_threadMutex );//m_audio->m_audioQueue.size() <= MAX_AUDIOQ_SIZE && m_video->m_videoQueue.size() <= MAX_VIDEOQ_SIZE)
+			m_cond.wait( lock, [&] { return true || m_quitFlag || m_decodePause; } );
+			if( m_quitFlag )
+				break;
 			int ret = av_read_frame( m_formatCtx, packet );
 			if( ret < 0 )
 			{
@@ -204,39 +240,39 @@ namespace Player
 				av_packet_unref( packet );
 		}
 		av_packet_free( &packet );
-		m_decodeFinished = true;
+		m_decodeActive = false;
 	}
 
 	bool FileReader::updateTextureFromFrame( SDL_Texture* texture, AVFrame* frame )
 	{
 		float aspect_ratio;
 		int w, h, x, y;
+		int screen_height, screen_width;
 		if( frame )
 		{
-			if( m_videoCodec->codecCtx->sample_aspect_ratio.num == 0 )
-			{
-				aspect_ratio = 0;
-			}
-			else
-			{
-				aspect_ratio = av_q2d( m_videoCodec->codecCtx->sample_aspect_ratio ) * m_videoCodec->codecCtx->width / m_videoCodec->codecCtx->height;
-			}
+				if( m_videoCodec->codecCtx->sample_aspect_ratio.num == 0 )
+				{
+					aspect_ratio = 0;
+				}
+				else
+				{
+					aspect_ratio = av_q2d( m_videoCodec->codecCtx->sample_aspect_ratio ) * m_videoCodec->codecCtx->width / m_videoCodec->codecCtx->height;
+				}
 
-			if( aspect_ratio <= 0.0 )
-			{
-				aspect_ratio = (float)m_videoCodec->codecCtx->width / (float)m_videoCodec->codecCtx->height;
-			}
+				if( aspect_ratio <= 0.0 )
+				{
+					aspect_ratio = (float)m_videoCodec->codecCtx->width / (float)m_videoCodec->codecCtx->height;
+				}
 
-			int screen_width = m_videoCodec->codecCtx->width / 2;
-			int screen_height = (m_videoCodec->codecCtx->height / 2);
-			h = screen_height;
-			w = ((int)rint( h * aspect_ratio )) & -3;
-			if( w > screen_width )
-			{
-				w = screen_width;
-				h = ((int)rint( w / aspect_ratio )) & -3;
-			}
-
+				int screen_width = m_videoCodec->codecCtx->width / 2;
+				int screen_height = (m_videoCodec->codecCtx->height / 2);
+				h = screen_height;
+				w = ((int)rint( h * aspect_ratio )) & -3;
+				if( w > screen_width )
+				{
+					w = screen_width;
+					h = ((int)rint( w / aspect_ratio )) & -3;
+				}
 			x = (screen_width - w);
 			y = (screen_height - h);
 			printf(
@@ -256,7 +292,7 @@ namespace Player
 			rect.y = y;
 			rect.w = 2 * w;
 			rect.h = 2 * h;
-			m_mutex.lock();
+			m_textureMutex.lock();
 			SDL_UpdateYUVTexture(
 				texture,
 				&rect,
@@ -267,7 +303,7 @@ namespace Player
 				frame->data[2],
 				frame->linesize[2]
 			);
-			m_mutex.unlock();
+			m_textureMutex.unlock();
 			return true;
 		}
 		return false;
@@ -301,8 +337,10 @@ namespace Player
 			delay = ( (int)(realDelay * 1000 + 0.5) );
 			printf( "Next Scheduled Refresh:\t%f\n\n", (double)(realDelay * 1000 + 0.5) );
 			updateTextureFromFrame( texture, pict.frame.get() );
-			if( m_video->m_pictQ.size() <= approximateFPS * 2 )
-				m_video->startVideoThread();
+			if( m_video->m_pictQ.size() <= 10 )
+				m_video->notifyVideoThread();
+			if( m_audio->m_audioQueue.size() <= MIN_AUDIOQ_SIZE || m_video->m_videoQueue.size() <= MIN_VIDEOQ_SIZE )
+				notifyDecoding();
 			return true;
 		}
 	}
