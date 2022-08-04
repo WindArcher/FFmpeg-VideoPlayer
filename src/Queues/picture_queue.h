@@ -31,6 +31,7 @@ public:
     VideoPicture getPicture( bool blocking );
     int size() { return m_pictQueue.size(); }
     void clear();
+    void pop();
 private:
     int m_totalSize{0};
     std::deque<VideoPicture> m_pictQueue;

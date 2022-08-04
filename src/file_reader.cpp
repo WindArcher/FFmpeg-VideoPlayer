@@ -331,10 +331,11 @@ namespace Player
 			double realDelay = m_video->getRealDelay( pict, m_audio->getAudioClock() );
 			if( realDelay == -1 )
 			{
-				delay = 1;
-				return false;
+				delay = 10;
+				m_video->m_pictQ.pop();
 			}
-			delay = static_cast<int>( realDelay );
+			else
+				delay = static_cast<int>(realDelay);
 			printf( "Next Scheduled Refresh:\t%f\n\n", realDelay );
 			updateTextureFromFrame( texture, pict.frame.get() );
 			if( m_video->m_pictQ.size() <= 10 )

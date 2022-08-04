@@ -119,11 +119,14 @@ namespace Player
 
             printf( "Real Delay:\t\t\t\t%f\n", realDelay );
 
-            if( realDelay < 0.01 )
+            if( realDelay < 0 )
+            {
+                return -1;
+            }
+            else if( realDelay < 0.01 )
             {
                 realDelay = 0.01;
             }
-
             printf( "Corrected Real Delay:\t%f\n", realDelay );
             return  realDelay * 1000;
         }

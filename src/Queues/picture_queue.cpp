@@ -54,3 +54,10 @@ void PictureQueue::clear()
     std::unique_lock<std::mutex> lock{ m_mutex };
     m_pictQueue.clear();
 }
+
+void PictureQueue::pop()
+{
+    std::unique_lock<std::mutex> lock{ m_mutex };
+    if( !m_pictQueue.empty() )
+        m_pictQueue.pop_front();
+}
