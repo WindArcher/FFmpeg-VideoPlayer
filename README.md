@@ -18,6 +18,6 @@ It has functions such as rewind, pause, stop and play.
 After opening you will see explorer window, that suggests opening a video file. Choose video file you are willing to open.
 After opening player automaticly starts playing video file. You can use buttons and rewind bar to manage the process.
 
-## Screenshots
+## Extra
 
-![alt text](https://gitlab.nixdev.co/c-education/danil-pristinskiy/ffmpeg_player/-/blob/master/extra/screenshot1.png)
+In extra folder you can find buttons vector image and point image, player screenshot, also there are two videos stars.mp4( 30fps ) and sunflower.mp4( 60 fps ). 
