@@ -11,20 +11,19 @@ int main()
     try
     {
         
-        OPENFILENAME ofn;       // common dialog box structure
-        TCHAR szFile[260] = { 0 };       // if using TCHAR macros
+        OPENFILENAME ofn;
+        TCHAR szFile[260] = { 0 };
         ZeroMemory( &ofn, sizeof( ofn ) );
         ofn.lStructSize = sizeof( ofn );
         ofn.hwndOwner = NULL;
         ofn.lpstrFile = szFile;
         ofn.nMaxFile = sizeof( szFile );
-        ofn.lpstrFilter = LPCWSTR( "All\0*.*\0Text\0*.TXT\0" );
+        ofn.lpstrFilter = L"Video files (*.mp4;*.avi;*.mkv)\0*.mp4;*.avi;*.mkv\0""All files\0*.*\0";
         ofn.nFilterIndex = 1;
         ofn.lpstrFileTitle = NULL;
         ofn.nMaxFileTitle = 0;
         ofn.lpstrInitialDir = NULL;
         ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-
         if( GetOpenFileName( &ofn ) == TRUE )
         {
             Window::Window inter;

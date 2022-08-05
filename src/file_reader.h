@@ -19,8 +19,6 @@ extern "C"
 #include <mutex>
 #include <condition_variable>
 
-#include "Interfaces/player.h"
-#include "Interfaces/decode_thread_handler.h"
 #include "Video/video.h"
 #include "Audio/audio.h"
 
@@ -38,22 +36,22 @@ namespace Player
         };
     }
     
-    class FileReader : public IPlayer, public IDecodeThreadHandler
+    class FileReader
     {
     public:
         FileReader() = default;
         ~FileReader();
-        bool open( const std::string& filename ) override;
-        void stop() override;
-        void play() override;
-        void pause() override;
-        void rewindRelative( int time ) override;
-        void rewindProgress( int progress ) override;
-        bool startDecoding() override;
-        bool stopDecoding() override;
-        bool pauseDecoding() override;
-        bool resumeDecoding() override;
-        bool notifyDecoding() override;
+        bool open( const std::string& filename );
+        void stop();
+        void play();
+        void pause();
+        void rewindRelative( int time );
+        void rewindProgress( int progress );
+        bool startDecoding();
+        bool stopDecoding();
+        bool pauseDecoding();
+        bool resumeDecoding();
+        bool notifyDecoding();
         void resetFile();
         bool isFinished();
         int getFileReadingProgress();

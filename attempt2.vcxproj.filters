@@ -10,9 +10,6 @@
     <Filter Include="src\Exceptions">
       <UniqueIdentifier>{c023c658-0d88-45de-acb9-c6025b32cec4}</UniqueIdentifier>
     </Filter>
-    <Filter Include="src\Interfaces">
-      <UniqueIdentifier>{fb420e7b-a00d-47ee-9dbc-030c944d52fc}</UniqueIdentifier>
-    </Filter>
     <Filter Include="src\Video">
       <UniqueIdentifier>{d95f27a7-f5db-406f-ac34-70a32c9bba8a}</UniqueIdentifier>
     </Filter>
@@ -103,12 +100,6 @@
     </ClInclude>
     <ClInclude Include="src\Exceptions\sdl_exception.h">
       <Filter>src\Exceptions</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Interfaces\decode_thread_handler.h">
-      <Filter>src\Interfaces</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Interfaces\player.h">
-      <Filter>src\Interfaces</Filter>
     </ClInclude>
     <ClInclude Include="src\Queues\packet_queue.h">
       <Filter>src\Queues</Filter>

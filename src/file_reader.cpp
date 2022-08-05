@@ -2,8 +2,6 @@
 #include "Exceptions/ffmpeg_exception.h"
 namespace Player
 {
-	static constexpr auto approximateFPS = 60;
-
 	namespace CodecData
 	{
 		CodecData::CodecData( AVCodecParameters* params )
@@ -16,9 +14,15 @@ namespace Player
 			if( codecCtx == nullptr )
 				throw std::exception( "Failed to allocate context decoder" );
 			if( avcodec_parameters_to_context( codecCtx, params ) < 0 )
+			{
+				avcodec_free_context( &codecCtx );
 				throw std::exception( "Failed to transfer parameters to context" );
+			}
 			if( avcodec_open2( codecCtx, codec, NULL ) < 0 )
+			{
+				CodecData::~CodecData();
 				throw std::exception( "Failed to open codec" );
+			}
 		}
 
 		CodecData::~CodecData()
@@ -44,8 +48,8 @@ namespace Player
 		findStreamNumbers();
 		m_audioCodec = std::make_unique<CodecData::CodecData>( m_formatCtx->streams[m_audioStreamNum]->codecpar );
 		m_videoCodec = std::make_unique<CodecData::CodecData>( m_formatCtx->streams[m_videoStreamNum]->codecpar );
-		m_audio = std::make_unique<Audio::Audio>( this, m_audioCodec->codecCtx, m_formatCtx, m_audioStreamNum );
-		m_video = std::make_unique<Video::Video>( this, m_videoCodec->codecCtx, m_formatCtx, m_videoStreamNum );
+		m_audio = std::make_unique<Audio::Audio>( m_audioCodec->codecCtx, m_formatCtx, m_audioStreamNum );
+		m_video = std::make_unique<Video::Video>( m_videoCodec->codecCtx, m_formatCtx, m_videoStreamNum );
 		return true;
 	}
 
@@ -126,7 +130,7 @@ namespace Player
 			avcodec_flush_buffers( m_videoCodec->codecCtx );
 			avcodec_flush_buffers( m_audioCodec->codecCtx );
 			m_audio->start();
-			resumeDecoding();
+			startDecoding();
 			m_video->resumeVideoThread();
 		}
 	}
@@ -151,7 +155,7 @@ namespace Player
 		if( m_formatCtx->streams[m_videoStreamNum] && (ret = av_seek_frame( m_formatCtx, m_videoStreamNum, videoPos, NULL )) > 0 )
 			throw FFmpegException( "Seek exception\n", ret );
 		m_audio->start();
-		resumeDecoding();
+		startDecoding();
 		m_video->resumeVideoThread();
 	}
 
@@ -163,6 +167,7 @@ namespace Player
 				m_decodeThread.join();
 			m_decodeActive = true;
 			m_quitFlag = false;
+			m_decodePause = false;
 			m_decodeThread = std::thread( &FileReader::decodeThread, this );
 		}
 		else
@@ -181,15 +186,23 @@ namespace Player
 
 	bool FileReader::pauseDecoding()
 	{
-		m_decodePause = true;
-		return true;
+		if( m_decodeActive )
+		{
+			m_decodePause = true;
+			return true;
+		}
+		return false;
 	}
 
 	bool FileReader::resumeDecoding()
 	{
-		m_decodePause = false;
-		m_cond.notify_one();
-		return true;
+		if( m_decodeActive )
+		{
+			m_decodePause = false;
+			m_cond.notify_one();
+			return true;
+		}
+		return false;
 	}
 
 	bool FileReader::notifyDecoding()
@@ -212,8 +225,8 @@ namespace Player
 			throw std::exception( "Could not alloc packet.\n" );
 		while( !m_quitFlag )
 		{
-			std::unique_lock<std::mutex> lock( m_threadMutex );//m_audio->m_audioQueue.size() <= MAX_AUDIOQ_SIZE && m_video->m_videoQueue.size() <= MAX_VIDEOQ_SIZE)
-			m_cond.wait( lock, [&] { return true || m_quitFlag || m_decodePause; } );
+			std::unique_lock<std::mutex> lock( m_threadMutex );
+			m_cond.wait( lock, [&] { return m_quitFlag || !m_decodePause; } );
 			if( m_quitFlag )
 				break;
 			int ret = av_read_frame( m_formatCtx, packet );

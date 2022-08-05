@@ -14,10 +14,6 @@ extern "C"
 #include <condition_variable>
 #include <deque>
 #include <memory>
-#define MAX_AUDIOQ_SIZE (5 * 16 * 1024)
-#define MAX_VIDEOQ_SIZE (5 * 256 * 1024)
-#define MIN_AUDIOQ_SIZE (5 * 8 * 1024)
-#define MIN_VIDEOQ_SIZE (5 * 128 * 1024 )
 
 struct AVPacketDeleter
 {

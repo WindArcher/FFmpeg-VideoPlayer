@@ -6,7 +6,9 @@ namespace Player
 {
     namespace Audio
     {
-        Audio::Audio( IDecodeThreadHandler* handler, AVCodecContext* codecContext, AVFormatContext* formatCtx, int steamNum ) : m_decodeHandler( handler )
+        static constexpr auto SDL_AUDIO_BUFFER_SIZE = 1024;
+
+        Audio::Audio( AVCodecContext* codecContext, AVFormatContext* formatCtx, int steamNum )
         {
             m_audioStream = formatCtx->streams[steamNum];
             m_audioContext = codecContext;
@@ -120,8 +122,6 @@ namespace Player
                 {
                     av_packet_unref( avPacket );
                 }
-                if( m_audioQueue.size() <= MIN_AUDIOQ_SIZE )
-                    m_decodeHandler->startDecoding();
                 avPacket = m_audioQueue.get( 1 );
                 if( avPacket == nullptr )
                 {

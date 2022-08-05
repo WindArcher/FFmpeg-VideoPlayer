@@ -10,13 +10,19 @@ namespace Window
 #ifdef _WIN32
 		SDL_AudioInit( "directsound" );
 #endif
-		m_window = SDL_CreateWindow( "Interface", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, m_width, m_height, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI );
+		m_window = SDL_CreateWindow( "FFmpeg Player", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, m_width, m_height, SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI );
 		SDL_GL_SetSwapInterval( 1 );
 		if( !m_window )
+		{
+			SDL_DestroyWindow( m_window );
 			throw std::exception( "Couldn't show display window" );
+		}
 		m_renderer = SDL_CreateRenderer( m_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_TARGETTEXTURE );
 		if( !m_renderer )
+		{
+			Window::~Window();
 			throw SDLException( "Couldn't create renderer;" );
+		}
 		SDL_SetRenderDrawColor( m_renderer, 255, 255, 255, 255 );
 		m_buttonBarRect = { 0, (m_height * 9) / 10, m_width, (m_height) / 10 };
 		m_buttonBar = std::make_unique<ButtonBar>( m_renderer, m_buttonBarRect );
@@ -111,20 +117,16 @@ namespace Window
 			}
 			case static_cast<Uint32>(Player::Events::Events::REWIND_BACKWARD_BUTTON_PUSHED):
 			{
-				m_pause = true;
 				m_videoBar->killRefreshTimer();
 				m_fileReader.rewindRelative( -60 );
-				m_pause = false;
 				m_videoBar->sheduleRefresh( 39 );
 				break;
 			}
 			case static_cast<Uint32>(Player::Events::Events::REWIND_BAR_POINT_CHANGED):
 			{
-				m_pause = true;
 				m_videoBar->killRefreshTimer();
 				int progress = *reinterpret_cast<int*>( event.user.data1 );
 				m_fileReader.rewindProgress( progress );
-				m_pause = false;
 				m_videoBar->sheduleRefresh( 39 );
 				break;
 			}

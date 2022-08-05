@@ -41,8 +41,6 @@
     <ClInclude Include="src\Exceptions\ffmpeg_exception.h" />
     <ClInclude Include="src\Exceptions\sdl_exception.h" />
     <ClInclude Include="src\file_reader.h" />
-    <ClInclude Include="src\Interfaces\decode_thread_handler.h" />
-    <ClInclude Include="src\Interfaces\player.h" />
     <ClInclude Include="src\Queues\packet_queue.h" />
     <ClInclude Include="src\Queues\picture_queue.h" />
     <ClInclude Include="src\Video\video.h" />

@@ -4,10 +4,10 @@ namespace Player
 {
     namespace Video
     {
-#define AV_SYNC_THRESHOLD 0.01
-#define AV_NOSYNC_THRESHOLD 1.0
+        static constexpr auto AV_SYNC_THRESHOLD = 0.01;
+        static constexpr auto AV_NOSYNC_THRESHOLD = 1.0;
 
-        Video::Video( IDecodeThreadHandler* handler, AVCodecContext* codecCtx, AVFormatContext* formatCtx, int streamNum ) : m_decodeHandler( handler )
+        Video::Video( AVCodecContext* codecCtx, AVFormatContext* formatCtx, int streamNum )
         {
             m_videoStream = formatCtx->streams[streamNum];
             m_videoContext = codecCtx;
@@ -156,8 +156,6 @@ namespace Player
                     int ret = avcodec_send_packet( m_videoContext, pkt );
                     if( ret < 0 )
                     {
-                        av_packet_free( &pkt );
-                        av_frame_free( &m_frame );
                         throw std::exception( "Error sending packet for decoding" );
                     }
                     while( ret >= 0 )
@@ -168,8 +166,6 @@ namespace Player
                             break;
                         else if( ret < 0 )
                         {
-                            av_packet_free( &pkt );
-                            av_frame_free( &m_frame );
                             throw std::exception( "Error while decoding" );
                         }
                         else
@@ -194,6 +190,8 @@ namespace Player
             }
             catch( std::exception& e )
             {
+                av_packet_free( &pkt );
+                av_frame_free( &m_frame );
                 std::cerr << e.what();
             }
         }
