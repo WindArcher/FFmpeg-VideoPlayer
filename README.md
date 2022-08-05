@@ -20,4 +20,4 @@ After opening player automaticly starts playing video file. You can use buttons 
 
 ## Screenshots
 
-![alt text](http:extra/screenshot1.png)
+![alt text](https://gitlab.nixdev.co/c-education/danil-pristinskiy/ffmpeg_player/-/blob/master/extra/screenshot1.png)
