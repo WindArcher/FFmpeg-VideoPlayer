@@ -1,16 +1,22 @@
 #pragma once
 #include <stdexcept>
+#include <string>
 #include <SDL2/SDL.h>
 class SDLException : public std::exception
 {
 public:
-    SDLException( const char* msg ) : m_msg( msg ) {}
-    const char* what()
+    SDLException( const std::string& msg ) 
     {
-        snprintf( m_buffer, sizeof m_buffer, "%s%s%s","SDL Exeption:\n", m_msg, SDL_GetError());
-        return m_buffer;
+        m_msg = "SDL Exeption:\n";
+        m_msg += msg;
+        m_msg += SDL_GetError();
     }
+
+    const char* what() const override
+    {
+        return m_msg.c_str();
+    }
+
 private:
-    const char* m_msg;
-    char m_buffer[512];
+    std::string m_msg;
 };

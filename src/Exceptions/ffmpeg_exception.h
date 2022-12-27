@@ -3,21 +3,25 @@ extern "C"
 {
 #include <libavutil/avutil.h>
 }
+#include <string>
 #include <stdexcept>
 class FFmpegException : public std::exception
 {
 public:
-    FFmpegException( const char* msg, int code ) : m_msg( msg ),m_code( code ) {}
-    const char* what()
+    FFmpegException( const std::string& msg, int code ) 
     {
+        m_msg = "FFmpeg exception\n";
+        m_msg += msg;
         char error_buf[128];
-        av_strerror( m_code, error_buf, 128 );
-        snprintf( m_buffer, sizeof m_buffer, "%s%s%s", "SDL Exeption:\n", m_msg, error_buf );
-        return m_buffer;
+        av_strerror( code, error_buf, 128 );
+        m_msg += error_buf;
+    }
+
+    const char* what() const override
+    {
+        return m_msg.c_str();
     }
 
 private:
-    const char* m_msg;
-    int m_code;
-    char m_buffer[512]{'\0'};
+    std::string m_msg;
 };

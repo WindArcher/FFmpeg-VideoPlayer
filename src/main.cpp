@@ -40,12 +40,4 @@ int main()
     {
         std::cerr << e.what();
     }
-    catch( FFmpegException& e )
-    {
-        std::cerr << e.what();
-    }
-    catch( SDLException& e )
-    {
-        std::cerr << e.what();
-    }
 }
